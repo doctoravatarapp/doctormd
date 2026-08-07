@@ -60,9 +60,9 @@ vercel teams list
 vercel project list --scope luciano-terres-projects
 ```
 
-Resultado esperado: identidade associada a `lucianoterresrosa@gmail.com`, team `luciano-terres-projects` acessível e o projeto APolloMD listado quando ele existir.
+Resultado esperado: identidade `lucianoterresrosa-6245` (conta `lucianoterresrosa@gmail.com`), team `luciano-terres-projects` e projeto `apollomd`.
 
-Se o scope não existir para a sessão, execute `vercel login` e conclua o device authorization usando a conta `lucianoterresrosa@gmail.com`; depois repita a validação. Não crie um projeto duplicado. O repositório ainda não possui vínculo `.vercel` nem projeto Vercel confirmado.
+Projeto ID: `prj_ZPagjWl1tpYe0Xc4jqc1BQRh8e6r`. Repositório conectado: `doctoravatarapp/doctormd`. URL pública: `https://apollomd.vercel.app`.
 
 ### 4. Google Cloud
 
@@ -131,13 +131,14 @@ Valores nunca devem aparecer neste arquivo, em `.env.example`, logs, issues ou p
 
 ## Deploy
 
-**PENDENTE POR AUTENTICAÇÃO VERCEL:** a aplicação existe e o build foi validado, mas ainda não há projeto Vercel vinculado, workflow CI/CD ou deployment confirmado. Antes do primeiro deploy:
+Deploy de produção testado:
 
-1. recuperar acesso ao team `luciano-terres-projects`;
-2. verificar se já existe projeto APolloMD no team;
-3. vincular o repositório oficial ao projeto existente ou criar um somente se a inexistência for confirmada;
-4. configurar as variáveis por ambiente;
-5. registrar aqui o comando/processo efetivamente testado, URL, branch e rollback.
+```bash
+vercel link --yes --project apollomd --scope luciano-terres-projects
+vercel deploy --prod --yes --scope luciano-terres-projects
+```
+
+Pushes para `main` também disparam deploy pelo vínculo GitHub.
 
 Build de produção validado com Node 22 e pnpm 11:
 
@@ -155,8 +156,9 @@ O script usa `next build --webpack`; o Turbopack não consegue abrir sua porta i
 - Supabase: `supabase projects list --output json` deve mostrar `bscpfutlmsvbwgtkdudv` como `ACTIVE_HEALTHY`.
 - GCP: `gcloud projects describe avatar-504818 --format='value(lifecycleState)'` deve retornar `ACTIVE`.
 - GitHub: `gh repo view doctoravatarapp/doctormd --json viewerPermission` deve retornar acesso.
-- Aplicação/Vercel: **PENDENTE**, pois nenhuma URL de deployment foi confirmada. Após o deploy, validar `https://<dominio>/` e `https://<dominio>/api/health`.
-- OpenAI: **PENDENTE** até existir endpoint server-side; não validar expondo ou imprimindo a chave.
+- Aplicação/Vercel: `https://apollomd.vercel.app/` deve retornar HTTP 200.
+- Health: `https://apollomd.vercel.app/api/health` deve retornar HTTP 200 e `status: ok`.
+- OpenAI: `vercel env ls --scope luciano-terres-projects` deve listar `OPENAI_API_KEY` como `Encrypted` em Production.
 
 ## Troubleshooting
 
@@ -201,29 +203,11 @@ Classificação em 2026-08-07:
 - **CONFIGURADO/VALIDADO — GitHub:** `origin` oficial; branch `main`; commit inicial `2f8b2eb` enviado com sucesso para `doctoravatarapp/doctormd`. Não existe CI/CD além da futura integração Vercel.
 - **VALIDADO — GitHub:** conta ativa `g4trader`; repositório `doctoravatarapp/doctormd`; permissão `WRITE`. A consulta direta de membership da organização retornou 404, mas o acesso ao repositório foi confirmado.
 - **CONFIGURADO/VALIDADO — Supabase:** CLI vinculada a `bscpfutlmsvbwgtkdudv`; projeto `doctormd`, região `us-east-1`, estado `ACTIVE_HEALTHY`; conexão remota de inventário validada. Não existem migrations, Edge Functions ou tabelas de aplicação visíveis em `table-stats`. Schema/RLS/Auth/Storage detalhados permanecem sem inventário completo porque o dump da CLI depende de Docker; nenhuma estrutura foi criada ou modificada.
-- **AÇÃO HUMANA NECESSÁRIA — Vercel:** sessão autenticada como `iatronedtech-4883`, com acesso apenas ao team `IATRON`. O fluxo `vercel login` foi testado e exige device authorization humano; a tentativa desta sessão foi encerrada sem trocar a conta. Nenhum recurso do team IATRON foi tocado.
+- **CONFIGURADO/VALIDADO — Vercel:** conta `lucianoterresrosa@gmail.com`, team `luciano-terres-projects`, projeto `apollomd`, GitHub conectado, deployment Production Ready e URL pública `https://apollomd.vercel.app`; home e health retornam HTTP 200.
 - **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`; acesso ao `avatar-504818` validado; contexto local alterado de `staging-503122` para `avatar-504818`; conta possui `roles/owner` (permissão ampla, revisar menor privilégio futuramente). Nenhum recurso GCP adicional foi criado.
-- **PENDENTE — OpenAI:** `OPENAI_API_KEY` não está configurada nesta sessão; boundary server-side e estratégia de secrets foram documentados, mas projeto/modelo/limites ainda não foram definidos.
+- **CONFIGURADO/VALIDADO — OpenAI:** `OPENAI_API_KEY` armazenada como variável `Encrypted`, exclusivamente em Production na Vercel. Valor não exibido.
 - **CRIADO:** documentação operacional e de arquitetura/segurança, aplicação inicial e proteções de Git.
 - **SEGURANÇA:** nenhum arquivo `.env`, secret versionado ou código foi encontrado. O repositório vazio limita a auditoria ao estado atual.
-
-### AÇÃO HUMANA NECESSÁRIA — Vercel
-
-- Serviço: Vercel
-- Conta esperada: `lucianoterresrosa@gmail.com`
-- Projeto/team esperado: `luciano-terres-projects`
-- Motivo: a sessão atual pertence a outra conta/team e o scope esperado não existe para ela.
-- Ação necessária: executar novamente `vercel login`, concluir o device authorization usando a conta esperada e garantir acesso ao team; não criar projeto duplicado.
-- Como validar depois: repetir `vercel whoami`, `vercel teams list` e `vercel project list --scope luciano-terres-projects`.
-
-### AÇÃO HUMANA NECESSÁRIA — OpenAI
-
-- Serviço: OpenAI
-- Conta esperada: conta autorizada do APolloMD
-- Projeto esperado: projeto OpenAI do APolloMD a confirmar
-- Motivo: nenhum secret OpenAI está configurado e ainda não existe runtime server-side.
-- Ação necessária: definir o projeto/conta OpenAI e, quando houver projeto Vercel, cadastrar `OPENAI_API_KEY` como secret server-side no ambiente correto.
-- Como validar depois: verificar somente presença e executar um health check server-side sem registrar a chave ou dados clínicos.
 
 ### DECISÃO DE COMPLIANCE PENDENTE
 
@@ -233,4 +217,4 @@ Antes de dados reais de pacientes: definir bases legais/consentimentos LGPD, ret
 
 - Data: 2026-08-07 (America/Sao_Paulo)
 - Codex/session: bootstrap inicial do APolloMD
-- Resultado: parcial — GitHub, Supabase e GCP validados; Supabase vinculado; aplicação e build validados; Vercel aguarda device authorization e OpenAI aguarda credencial/projeto; nenhum recurso cloud criado ou removido.
+- Resultado: infraestrutura ativa — GitHub, Supabase, Vercel, GCP, OpenAI, deployment público e health check validados.
