@@ -126,6 +126,7 @@ Não adicionar `SUPABASE_DB_PASSWORD` ao runtime web; ela deve ser restrita ao f
 - Produção/Preview web: armazenar como Environment Variables protegidas no projeto Vercel correto, separadas por ambiente.
 - Supabase: credenciais administrativas permanecem no provedor e no armazenamento seguro da CLI/operador autorizado.
 - GCP: usar Secret Manager e service accounts de menor privilégio somente quando surgir um workload concreto no GCP.
+- Automations scheduler: GCP Cloud Scheduler no projeto `avatar-504818`, chamando a cada minuto o endpoint Vercel protegido por `CRON_SECRET`.
 - Desenvolvimento cloud: usar secrets do ambiente remoto, nunca arquivos `.env` versionados.
 - GitHub/Vercel/Supabase/GCP CLI: credenciais ficam nos keychains/configurações do usuário, fora do repositório.
 
