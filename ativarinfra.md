@@ -117,7 +117,7 @@ Ambas estão configuradas em Production no projeto Vercel `apollomd`.
 - `OPENAI_API_KEY`
 - `OPENAI_PROJECT_ID` — opcional, quando a seleção explícita de projeto for necessária
 - `OPENAI_ORG_ID` — opcional, quando a seleção explícita de organização for necessária
-- `SUPABASE_SERVICE_ROLE_KEY` — somente se uma operação server-side realmente exigir bypass de RLS
+- `SUPABASE_SERVICE_ROLE_KEY` — necessária no runtime server-side do chat para persistir respostas da IA e controlar concorrência após validação do paciente sob RLS; nunca exposta ao browser
 
 Não adicionar `SUPABASE_DB_PASSWORD` ao runtime web; ela deve ser restrita ao fluxo seguro de administração/migrations quando necessária. Atualize esta lista quando o contrato real for criado.
 

@@ -47,12 +47,12 @@ export type Database = {
         { id?: string; organization_id: string; patient_id: string; doctor_id: string; procedure_name: string; procedure_date?: string | null; status?: "planned" | "preoperative" | "postoperative" | "completed" | "cancelled"; started_at?: string | null; ended_at?: string | null; created_at?: string; updated_at?: string }
       >;
       conversations: Table<
-        Timestamped & { id: string; organization_id: string; patient_id: string; care_episode_id: string | null; status: "open" | "closed" | "archived"; mode: "ai" | "waiting_doctor" | "doctor"; last_message_at: string | null },
-        { id?: string; organization_id: string; patient_id: string; care_episode_id?: string | null; status?: "open" | "closed" | "archived"; mode?: "ai" | "waiting_doctor" | "doctor"; last_message_at?: string | null; created_at?: string; updated_at?: string }
+        Timestamped & { id: string; organization_id: string; patient_id: string; care_episode_id: string | null; status: "open" | "closed" | "archived"; mode: "ai" | "waiting_doctor" | "doctor"; last_message_at: string | null; generation_started_at: string | null },
+        { id?: string; organization_id: string; patient_id: string; care_episode_id?: string | null; status?: "open" | "closed" | "archived"; mode?: "ai" | "waiting_doctor" | "doctor"; last_message_at?: string | null; generation_started_at?: string | null; created_at?: string; updated_at?: string }
       >;
       messages: Table<
-        { id: string; organization_id: string; conversation_id: string; sender_type: "patient" | "ai" | "doctor" | "staff" | "system"; sender_user_id: string | null; content: string; metadata: Json; created_at: string },
-        { id?: string; organization_id: string; conversation_id: string; sender_type: "patient" | "ai" | "doctor" | "staff" | "system"; sender_user_id?: string | null; content: string; metadata?: Json; created_at?: string }
+        { id: string; organization_id: string; conversation_id: string; sender_type: "patient" | "ai" | "doctor" | "staff" | "system"; sender_user_id: string | null; content: string; metadata: Json; client_message_id: string | null; created_at: string },
+        { id?: string; organization_id: string; conversation_id: string; sender_type: "patient" | "ai" | "doctor" | "staff" | "system"; sender_user_id?: string | null; content: string; metadata?: Json; client_message_id?: string | null; created_at?: string }
       >;
       red_flag_rules: Table<
         Timestamped & { id: string; organization_id: string; created_by: string | null; name: string; description: string | null; severity: "low" | "medium" | "high" | "critical"; status: "active" | "inactive"; configuration: Json },

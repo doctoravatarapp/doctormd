@@ -442,6 +442,12 @@
 .inline-edit button, .stack-form button, .text-button { background: #1d6b4e; border: 0; border-radius: .55rem; color: white; cursor: pointer; padding: .65rem; }
 .text-button { background: transparent; color: #8c4632; padding: .5rem 0; }
 .muted-copy { color: #74817a; font-size: .7rem; line-height: 1.5; }
+.admin-message-history { display: grid; gap: 1rem; }
+.admin-message { border-bottom: 1px solid rgba(23,35,30,.08); padding-bottom: 1rem; }
+.admin-message>div { display: flex; justify-content: space-between; }
+.admin-message strong { font-size: .7rem; }
+.admin-message time { color: #829089; font-size: .6rem; }
+.admin-message p { font-size: .75rem; line-height: 1.6; margin: .5rem 0 0; white-space: pre-wrap; }
 
 @media (max-width: 980px) {
   .admin-shell { grid-template-columns: 5rem minmax(0, 1fr); }
