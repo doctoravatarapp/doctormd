@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
 import { getAdminContext } from "@/lib/auth/context";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const context = await getAdminContext();
@@ -21,6 +22,10 @@ export default async function DashboardPage() {
   const patientIds = [...new Set(recentEpisodes?.map((episode) => episode.patient_id) ?? [])];
   const { data: episodePatients } = patientIds.length ? await supabase.from("patients").select("id, full_name, preferred_name").in("id", patientIds) : { data: [] };
   const patientNames = new Map(episodePatients?.map((patient) => [patient.id, patient.preferred_name || patient.full_name]));
+  const { data: attention } = organizationId ? await supabase.from("red_flag_events").select("id, patient_id, conversation_id, rule_id, message_id, severity, status, created_at").eq("organization_id", organizationId).in("status", ["new", "acknowledged"]).order("created_at").limit(5) : { data: [] };
+  const attentionPatientIds=[...new Set(attention?.flatMap(item=>item.patient_id?[item.patient_id]:[])??[])], attentionRuleIds=[...new Set(attention?.flatMap(item=>item.rule_id?[item.rule_id]:[])??[])], attentionMessageIds=[...new Set(attention?.flatMap(item=>item.message_id?[item.message_id]:[])??[])];
+  const [{data:attentionPatients},{data:attentionRules},{data:attentionMessages}]=await Promise.all([attentionPatientIds.length?supabase.from("patients").select("id,full_name,preferred_name").in("id",attentionPatientIds):Promise.resolve({data:[]}),attentionRuleIds.length?supabase.from("red_flag_rules").select("id,name").in("id",attentionRuleIds):Promise.resolve({data:[]}),attentionMessageIds.length?supabase.from("messages").select("id,content").in("id",attentionMessageIds):Promise.resolve({data:[]})]);
+  const attentionNames=new Map(attentionPatients?.map(p=>[p.id,p.preferred_name||p.full_name])),attentionRuleNames=new Map(attentionRules?.map(r=>[r.id,r.name])),attentionText=new Map(attentionMessages?.map(m=>[m.id,m.content]));
 
   return (
     <main className="admin-content">
@@ -35,7 +40,7 @@ export default async function DashboardPage() {
       </section>
       <section className="dashboard-grid">
         <article className="panel panel-wide"><div className="panel-title"><h2>Conversas recentes</h2><span>Atualizado agora</span></div><EmptyState icon="◌" title="Nenhuma conversa ainda" description="As conversas dos pacientes aparecerão aqui quando forem iniciadas." /></article>
-        <article className="panel"><div className="panel-title"><h2>Necessitam atenção</h2></div><EmptyState icon="△" title="Tudo tranquilo" description="Nenhum alerta ou intervenção pendente." /></article>
+        <article className="panel"><div className="panel-title"><h2>Necessitam atenção</h2></div>{attention?.length?attention.map(item=><Link className="attention-row" href={`/admin/conversations/${item.conversation_id}`} key={item.id}><div><strong>{item.patient_id?attentionNames.get(item.patient_id):"Paciente"}</strong><span>{item.rule_id?attentionRuleNames.get(item.rule_id):"Alerta"} · {item.severity}</span></div><p>{item.message_id?`${attentionText.get(item.message_id)?.slice(0,80)??""}${(attentionText.get(item.message_id)?.length??0)>80?"…":""}`:""}</p><small>{item.status} · aguardando desde {new Intl.DateTimeFormat("pt-BR",{hour:"2-digit",minute:"2-digit"}).format(new Date(item.created_at))}</small></Link>):<EmptyState icon="△" title="Tudo tranquilo" description="Nenhum alerta ou intervenção pendente." />}</article>
         <article className="panel panel-wide"><div className="panel-title"><h2>Acompanhamentos recentes</h2></div>{recentEpisodes?.length ? recentEpisodes.map((episode) => <a className="compact-row" href={`/admin/episodes/${episode.id}`} key={episode.id}><strong>{patientNames.get(episode.patient_id) || "Paciente"} · {episode.procedure_name}</strong><span>{episode.status} →</span></a>) : <EmptyState icon="◎" title="Sem episódios ativos" description="Os acompanhamentos pré e pós-operatórios serão resumidos aqui." />}</article>
       </section>
     </main>

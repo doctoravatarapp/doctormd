@@ -12,7 +12,7 @@ const navigation = [
   { href: "/admin/settings", label: "Configurações", icon: "⚙" },
 ];
 
-export function Sidebar({ organizationName, email }: { organizationName: string; email: string | null }) {
+export function Sidebar({ organizationName, email, alertCount = 0 }: { organizationName: string; email: string | null; alertCount?: number }) {
   return (
     <aside className="admin-sidebar">
       <Link className="brand admin-brand" href="/admin">
@@ -25,7 +25,7 @@ export function Sidebar({ organizationName, email }: { organizationName: string;
       </div>
       <nav>
         {navigation.map((item) => (
-          <Link href={item.href} key={item.href}><span>{item.icon}</span>{item.label}</Link>
+          <Link href={item.href} key={item.href}><span>{item.icon}</span>{item.label}{item.href === "/admin/alerts" && alertCount > 0 ? <b className="nav-count">{alertCount}</b> : null}</Link>
         ))}
       </nav>
       <div className="sidebar-account">
