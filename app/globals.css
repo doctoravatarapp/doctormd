@@ -122,6 +122,46 @@ footer {
   width: 0.65rem;
 }
 
+.access-nav,
+.hero-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.access-link {
+  background: var(--green);
+  border: 1px solid var(--green);
+  border-radius: 0.75rem;
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 750;
+  padding: 0.7rem 0.95rem;
+  text-decoration: none;
+}
+
+.access-link-secondary {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.hero-actions {
+  margin: -0.7rem 0 2rem;
+}
+
+.hero-actions .access-link {
+  font-size: 0.85rem;
+  padding: 0.85rem 1rem;
+}
+
+.text-access-link {
+  color: var(--green-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .hero {
   align-items: center;
   display: grid;

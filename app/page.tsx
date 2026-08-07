@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ChatPreview } from "@/components/chat-preview";
 
 export default function Home() {
@@ -13,9 +14,10 @@ export default function Home() {
           </span>
           <span>APolloMD</span>
         </a>
-        <span className="status-pill">
-          <span className="status-dot" /> Ambiente cloud operacional
-        </span>
+        <nav className="access-nav" aria-label="Acessos">
+          <Link className="access-link access-link-secondary" href="/login">Área médica</Link>
+          <Link className="access-link" href="/patient/login">Entrar como paciente</Link>
+        </nav>
       </header>
 
       <section id="inicio" className="hero">
@@ -28,6 +30,11 @@ export default function Home() {
             O APolloMD cria uma ponte conversacional contínua entre médicos e pacientes — simples,
             humana e preparada para cada etapa do acompanhamento.
           </p>
+
+          <div className="hero-actions">
+            <Link className="access-link" href="/patient/login">Acessar meu acompanhamento</Link>
+            <Link className="text-access-link" href="/login">Sou profissional de saúde →</Link>
+          </div>
 
           <div className="principles" aria-label="Princípios do produto">
             <div>
@@ -50,7 +57,7 @@ export default function Home() {
 
       <footer>
         <span>APolloMD</span>
-        <p>Infraestrutura inicial validada. Funcionalidades clínicas ainda não estão ativas.</p>
+        <p>Canal seguro de acompanhamento entre pacientes e suas equipes.</p>
       </footer>
     </main>
   );
