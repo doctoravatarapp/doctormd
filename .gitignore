@@ -1,0 +1,17 @@
+# Secrets e configurações locais de CLI
+.env
+.env.*
+!.env.example
+.vercel/
+.supabase/
+supabase/.temp/
+
+# Dependências e saídas de build
+node_modules/
+.next/
+out/
+coverage/
+
+# Sistema/editor
+.DS_Store
+*.log
