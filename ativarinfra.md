@@ -198,10 +198,10 @@ Classificação em 2026-08-07:
 
 - **CRIADO — aplicação:** Next.js 16.3.0, React 19.2.8, TypeScript 6.0.3, Tailwind CSS 4.3.3, Node 22 e pnpm 11.20.0; home responsiva e endpoint server-side `/api/health`.
 - **VALIDADO — aplicação:** lint, typecheck e build de produção passaram. Rotas geradas: `/` estática e `/api/health` dinâmica.
-- **ENCONTRADO — repositório:** `origin` oficial configurado; branch local `main`; nenhum histórico remoto ou CI/CD existente antes desta fase.
+- **CONFIGURADO/VALIDADO — GitHub:** `origin` oficial; branch `main`; commit inicial `2f8b2eb` enviado com sucesso para `doctoravatarapp/doctormd`. Não existe CI/CD além da futura integração Vercel.
 - **VALIDADO — GitHub:** conta ativa `g4trader`; repositório `doctoravatarapp/doctormd`; permissão `WRITE`. A consulta direta de membership da organização retornou 404, mas o acesso ao repositório foi confirmado.
 - **CONFIGURADO/VALIDADO — Supabase:** CLI vinculada a `bscpfutlmsvbwgtkdudv`; projeto `doctormd`, região `us-east-1`, estado `ACTIVE_HEALTHY`; conexão remota de inventário validada. Não existem migrations, Edge Functions ou tabelas de aplicação visíveis em `table-stats`. Schema/RLS/Auth/Storage detalhados permanecem sem inventário completo porque o dump da CLI depende de Docker; nenhuma estrutura foi criada ou modificada.
-- **AÇÃO HUMANA NECESSÁRIA — Vercel:** sessão anterior autenticada como `iatronedtech-4883`, com acesso apenas ao team `IATRON`. Fluxo `vercel login` iniciado e aguardando device authorization na conta correta. Nenhum recurso do team IATRON foi tocado.
+- **AÇÃO HUMANA NECESSÁRIA — Vercel:** sessão autenticada como `iatronedtech-4883`, com acesso apenas ao team `IATRON`. O fluxo `vercel login` foi testado e exige device authorization humano; a tentativa desta sessão foi encerrada sem trocar a conta. Nenhum recurso do team IATRON foi tocado.
 - **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`; acesso ao `avatar-504818` validado; contexto local alterado de `staging-503122` para `avatar-504818`; conta possui `roles/owner` (permissão ampla, revisar menor privilégio futuramente). Nenhum recurso GCP adicional foi criado.
 - **PENDENTE — OpenAI:** `OPENAI_API_KEY` não está configurada nesta sessão; boundary server-side e estratégia de secrets foram documentados, mas projeto/modelo/limites ainda não foram definidos.
 - **CRIADO:** documentação operacional e de arquitetura/segurança, aplicação inicial e proteções de Git.
@@ -213,7 +213,7 @@ Classificação em 2026-08-07:
 - Conta esperada: `lucianoterresrosa@gmail.com`
 - Projeto/team esperado: `luciano-terres-projects`
 - Motivo: a sessão atual pertence a outra conta/team e o scope esperado não existe para ela.
-- Ação necessária: concluir o device authorization iniciado por `vercel login` usando a conta esperada e garantir acesso ao team; não criar projeto duplicado.
+- Ação necessária: executar novamente `vercel login`, concluir o device authorization usando a conta esperada e garantir acesso ao team; não criar projeto duplicado.
 - Como validar depois: repetir `vercel whoami`, `vercel teams list` e `vercel project list --scope luciano-terres-projects`.
 
 ### AÇÃO HUMANA NECESSÁRIA — OpenAI
