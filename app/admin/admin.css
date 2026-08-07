@@ -458,6 +458,7 @@
 .doctor-composer { display:flex;gap:.7rem; }.doctor-composer textarea { border:1px solid rgba(23,35,30,.12);border-radius:.65rem;flex:1;min-height:5rem;padding:.75rem;resize:vertical; }
 .alert-filters { align-items:center;display:flex;gap:.7rem;margin-bottom:1rem; }.alert-filters>a { color:#276f54;font-size:.68rem;font-weight:700;text-decoration:none; }.alert-filters form { display:flex;gap:.4rem;margin-left:auto; }.alert-filters select { border:1px solid rgba(23,35,30,.12);border-radius:.55rem;padding:.55rem; }
 .attention-row { border-bottom:1px solid rgba(23,35,30,.08);color:inherit;display:block;padding:.75rem 0;text-decoration:none; }.attention-row div { display:flex;justify-content:space-between; }.attention-row span,.attention-row small { color:#74817a;font-size:.6rem; }.attention-row p { color:#54635b;font-size:.65rem;margin:.35rem 0; }.settings-links a { color:inherit;display:flex;justify-content:space-between;text-decoration:none; }.settings-links span { color:#2a7559;font-size:.7rem; }
+.automation-editor,.steps-panel,.automation-episode { display:grid;gap:1rem; }.steps-panel>article { border-bottom:1px solid rgba(23,35,30,.08);display:flex;justify-content:space-between;padding:1rem 0; }.steps-panel>article>div { display:grid;gap:.35rem; }.steps-panel small,.automation-episode small { color:#74817a;font-size:.62rem; }.steps-panel p,.automation-episode p { color:#596860;font-size:.7rem;margin:.2rem 0; }.step-form { background:#f5f8f6;display:grid;gap:.6rem;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:.7rem;padding:.8rem; }.step-form input,.step-form select,.step-form textarea { border:1px solid rgba(23,35,30,.12);border-radius:.55rem;padding:.65rem; }.step-form textarea { grid-column:1/-1;min-height:5rem; }.step-form button { background:#1d6b4e;border:0;border-radius:.55rem;color:white;padding:.7rem; }.automation-controls { display:flex;gap:.6rem; }.automation-episode>section { border-bottom:1px solid rgba(23,35,30,.08);padding-bottom:1rem; }
 
 @media (max-width: 980px) {
   .admin-shell { grid-template-columns: 5rem minmax(0, 1fr); }
@@ -502,4 +503,5 @@
   .data-row > span:last-child { display: none; }
   .doctor-row { grid-template-columns: auto minmax(0,1fr) auto; }
   .doctor-row .episode-count { display: none; }
+  .step-form { grid-template-columns: 1fr; }
 }
