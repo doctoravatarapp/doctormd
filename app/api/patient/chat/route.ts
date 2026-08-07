@@ -40,7 +40,11 @@ export async function POST(request: Request) {
   });
   if (matched.length) {
     for (const rule of matched) {
-      const { data: event } = await admin.from("red_flag_events").upsert({ organization_id: patient.organization_id, rule_id: rule.id, conversation_id: conversation.id, message_id: patientMessage.id, patient_id: patient.id, severity: rule.severity, status: "new", metadata: { detector: "deterministic_contains" } }, { onConflict: "rule_id,message_id", ignoreDuplicates: true }).select("id").maybeSingle();
+      const { data: event, error: eventError } = await admin.from("red_flag_events").insert({ organization_id: patient.organization_id, rule_id: rule.id, conversation_id: conversation.id, message_id: patientMessage.id, patient_id: patient.id, severity: rule.severity, status: "new", metadata: { detector: "deterministic_contains" } }).select("id").single();
+      if (eventError || !event) {
+        console.error("red_flag_event_failed", { conversationId: conversation.id, ruleId: rule.id, code: eventError?.code });
+        return new Response("A mensagem foi salva, mas não foi possível acionar a equipe.", { status: 500 });
+      }
       if (event) await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "red_flag.created", entity_type: "red_flag_event", entity_id: event.id, metadata: { conversation_id: conversation.id, rule_id: rule.id } });
     }
     const safeMessage = "Sua mensagem foi sinalizada para análise da equipe responsável. Aguarde uma orientação pelo atendimento.";
