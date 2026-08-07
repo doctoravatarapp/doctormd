@@ -425,6 +425,23 @@
 }
 
 .compact-row span { color: #74817a; }
+.compact-row { color: inherit; text-decoration: none; }
+
+.doctor-row {
+  align-items: center; border-bottom: 1px solid rgba(23,35,30,.07); display: grid;
+  gap: .8rem; grid-template-columns: auto minmax(12rem,1fr) auto auto auto; padding: .9rem;
+}
+.doctor-summary { display: grid; gap: .2rem; }
+.doctor-summary strong { font-size: .75rem; }
+.doctor-summary small, .episode-count { color: #7b8982; font-size: .64rem; }
+.doctor-row details { font-size: .65rem; }
+.doctor-row summary { color: #276f54; cursor: pointer; }
+.inline-edit, .stack-form { display: grid; gap: .6rem; margin-top: .8rem; }
+.inline-edit { background: #f4f7f5; padding: .7rem; position: absolute; right: 2rem; z-index: 2; }
+.inline-edit input, .stack-form input, .stack-form select { background: #f8faf8; border: 1px solid rgba(23,35,30,.12); border-radius: .55rem; min-height: 2.5rem; padding: .65rem; }
+.inline-edit button, .stack-form button, .text-button { background: #1d6b4e; border: 0; border-radius: .55rem; color: white; cursor: pointer; padding: .65rem; }
+.text-button { background: transparent; color: #8c4632; padding: .5rem 0; }
+.muted-copy { color: #74817a; font-size: .7rem; line-height: 1.5; }
 
 @media (max-width: 980px) {
   .admin-shell { grid-template-columns: 5rem minmax(0, 1fr); }
@@ -467,4 +484,6 @@
   .patient-form { grid-template-columns: 1fr; }
   .data-row { grid-template-columns: auto minmax(0, 1fr) auto; }
   .data-row > span:last-child { display: none; }
+  .doctor-row { grid-template-columns: auto minmax(0,1fr) auto; }
+  .doctor-row .episode-count { display: none; }
 }

@@ -39,8 +39,8 @@ export type Database = {
         { id?: string; organization_id: string; user_id?: string | null; display_name: string; specialty?: string | null; professional_registration?: string | null; status?: "active" | "inactive"; created_at?: string; updated_at?: string }
       >;
       patients: Table<
-        Timestamped & { id: string; organization_id: string; full_name: string; preferred_name: string | null; email: string | null; phone: string | null; birth_date: string | null; status: "active" | "inactive" },
-        { id?: string; organization_id: string; full_name: string; preferred_name?: string | null; email?: string | null; phone?: string | null; birth_date?: string | null; status?: "active" | "inactive"; created_at?: string; updated_at?: string }
+        Timestamped & { id: string; organization_id: string; auth_user_id: string | null; full_name: string; preferred_name: string | null; email: string | null; phone: string | null; birth_date: string | null; status: "active" | "inactive" },
+        { id?: string; organization_id: string; auth_user_id?: string | null; full_name: string; preferred_name?: string | null; email?: string | null; phone?: string | null; birth_date?: string | null; status?: "active" | "inactive"; created_at?: string; updated_at?: string }
       >;
       care_episodes: Table<
         Timestamped & { id: string; organization_id: string; patient_id: string; doctor_id: string; procedure_name: string; procedure_date: string | null; status: "planned" | "preoperative" | "postoperative" | "completed" | "cancelled"; started_at: string | null; ended_at: string | null },
@@ -68,7 +68,12 @@ export type Database = {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_care_episode: {
+        Args: { target_patient_id: string; target_doctor_id: string; target_procedure_name: string; target_procedure_date?: string | null; target_status?: "planned" | "preoperative" | "postoperative" | "completed" | "cancelled" };
+        Returns: string;
+      };
+    };
     Enums: {
       app_role: AppRole;
       member_status: MemberStatus;

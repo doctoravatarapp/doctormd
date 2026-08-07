@@ -4,6 +4,7 @@ import { logout } from "@/app/login/actions";
 const navigation = [
   { href: "/admin", label: "Visão geral", icon: "⌂" },
   { href: "/admin/patients", label: "Pacientes", icon: "◎" },
+  { href: "/admin/doctors", label: "Médicos", icon: "+" },
   { href: "/admin/conversations", label: "Conversas", icon: "◌" },
   { href: "/admin/alerts", label: "Alertas", icon: "△" },
   { href: "/admin/automations", label: "Automações", icon: "◇" },

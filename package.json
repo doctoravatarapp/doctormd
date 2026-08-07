@@ -11,6 +11,8 @@
     "build": "next build --webpack",
     "dev": "next dev",
     "lint": "eslint .",
+    "test:tenant-rls": "node scripts/test-tenant-rls.mjs",
+    "test:admin-login": "node scripts/validate-admin-login.mjs",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
