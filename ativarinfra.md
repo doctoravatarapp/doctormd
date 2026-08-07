@@ -110,6 +110,8 @@ Contrato inicial documentado em `docs/security.md`, sujeito à integração e re
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
+Ambas estão configuradas em Production no projeto Vercel `apollomd`.
+
 ### Server-side / secrets
 
 - `OPENAI_API_KEY`
@@ -202,7 +204,7 @@ Classificação em 2026-08-07:
 - **VALIDADO — aplicação:** lint, typecheck e build de produção passaram. Rotas geradas: `/` estática e `/api/health` dinâmica.
 - **CONFIGURADO/VALIDADO — GitHub:** `origin` oficial; branch `main`; commit inicial `2f8b2eb` enviado com sucesso para `doctoravatarapp/doctormd`. Não existe CI/CD além da futura integração Vercel.
 - **VALIDADO — GitHub:** conta ativa `g4trader`; repositório `doctoravatarapp/doctormd`; permissão `WRITE`. A consulta direta de membership da organização retornou 404, mas o acesso ao repositório foi confirmado.
-- **CONFIGURADO/VALIDADO — Supabase:** CLI vinculada a `bscpfutlmsvbwgtkdudv`; projeto `doctormd`, região `us-east-1`, estado `ACTIVE_HEALTHY`; conexão remota de inventário validada. Não existem migrations, Edge Functions ou tabelas de aplicação visíveis em `table-stats`. Schema/RLS/Auth/Storage detalhados permanecem sem inventário completo porque o dump da CLI depende de Docker; nenhuma estrutura foi criada ou modificada.
+- **CONFIGURADO/VALIDADO — Supabase:** CLI vinculada a `bscpfutlmsvbwgtkdudv`; migration `20260807193000_product_foundation.sql` aplicada; 12 tabelas de fundação criadas com RLS; lint remoto sem erros; leitura e escrita anônimas em `patients` retornam HTTP 401.
 - **CONFIGURADO/VALIDADO — Vercel:** conta `lucianoterresrosa@gmail.com`, team `luciano-terres-projects`, projeto `apollomd`, GitHub conectado, deployment Production Ready e URL pública `https://apollomd.vercel.app`; home e health retornam HTTP 200.
 - **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`; acesso ao `avatar-504818` validado; contexto local alterado de `staging-503122` para `avatar-504818`; conta possui `roles/owner` (permissão ampla, revisar menor privilégio futuramente). Nenhum recurso GCP adicional foi criado.
 - **CONFIGURADO/VALIDADO — OpenAI:** `OPENAI_API_KEY` armazenada como variável `Encrypted`, exclusivamente em Production na Vercel. Valor não exibido.
