@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Autenticação necessária.", { status: 401 });
-  let body: { conversationId?: string; content?: string; clientMessageId?: string };
+  let body: { conversationId?: string; content?: string; clientMessageId?: string; questionStepId?: string };
   try { body = await request.json(); } catch { return new Response("Requisição inválida.", { status: 400 }); }
   const content = body.content?.trim() ?? "";
   if (!body.conversationId || !body.clientMessageId || !/^[0-9a-f-]{36}$/i.test(body.clientMessageId) || !content || content.length > AI_CONFIG.maxInputCharacters) return new Response("Mensagem inválida ou muito longa.", { status: 400 });
@@ -23,6 +23,8 @@ export async function POST(request: Request) {
   const { data: doctor } = await supabase.from("doctors").select("display_name").eq("id", episode.doctor_id).maybeSingle();
 
   const admin = createAdminClient();
+  const { data: activeQuestion } = await admin.from("episode_automations").select("current_step_id").eq("care_episode_id", episode.id).eq("status", "waiting_response").order("created_at").limit(1).maybeSingle();
+  const expectedQuestionStepId = body.questionStepId || activeQuestion?.current_step_id || null;
   const since = new Date(Date.now() - AI_CONFIG.rateWindowMinutes * 60_000).toISOString();
   const { count } = await admin.from("messages").select("id", { count: "exact", head: true }).eq("conversation_id", conversation.id).eq("sender_type", "patient").gte("created_at", since);
   if ((count ?? 0) >= AI_CONFIG.rateMaxMessages) return new Response("Muitas mensagens em pouco tempo. Aguarde alguns minutos.", { status: 429 });
@@ -74,6 +76,11 @@ export async function POST(request: Request) {
       return new Response(feedback, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-question": "invalid" } });
     }
     return new Response(null, { status: 204, headers: { "x-apollomd-question": "answered" } });
+  }
+
+  if (expectedQuestionStepId && /^[0-9a-f-]{36}$/i.test(expectedQuestionStepId)) {
+    const { data: alreadyAnswered } = await admin.from("automation_responses").select("id").eq("conversation_id", conversation.id).eq("automation_step_id", expectedQuestionStepId).maybeSingle();
+    if (alreadyAnswered) return new Response(null, { status: 204, headers: { "x-apollomd-question": "duplicate" } });
   }
 
   const staleAt = new Date(Date.now() - AI_CONFIG.generationLockSeconds * 1000).toISOString();
