@@ -47,13 +47,34 @@ export async function POST(request: Request) {
       }
       if (event) await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "red_flag.created", entity_type: "red_flag_event", entity_id: event.id, metadata: { conversation_id: conversation.id, rule_id: rule.id } });
     }
+    // A resposta estruturada pode ser registrada, mas a troca para waiting_doctor
+    // acontece antes de qualquer próxima execução da automação.
+    const { data: structured } = await admin.rpc("answer_active_automation_question", { target_conversation_id: conversation.id, target_message_id: patientMessage.id, raw_answer: content });
+    if (structured && typeof structured === "object" && "handled" in structured && structured.handled && "valid" in structured && !structured.valid) {
+      await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "automation.response_invalid", entity_type: "message", entity_id: patientMessage.id, metadata: { conversation_id: conversation.id } });
+    }
     const safeMessage = "Sua mensagem foi sinalizada para análise da equipe responsável. Aguarde uma orientação pelo atendimento.";
     await admin.from("conversations").update({ mode: "waiting_doctor", generation_started_at: null }).eq("id", conversation.id).eq("mode", "ai");
     await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: safeMessage, metadata: { reason: "red_flag_handoff" } });
-    return new Response(safeMessage, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system" } });
+    return new Response(safeMessage, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-mode": "waiting_doctor" } });
   }
 
   if (conversation.mode !== "ai") return new Response(null, { status: 204, headers: { "x-apollomd-mode": conversation.mode } });
+
+  const { data: structured, error: structuredError } = await admin.rpc("answer_active_automation_question", { target_conversation_id: conversation.id, target_message_id: patientMessage.id, raw_answer: content });
+  if (structuredError) {
+    console.error("automation_response_failed", { conversationId: conversation.id, code: structuredError.code });
+    return new Response("A mensagem foi salva, mas a resposta não pôde ser processada.", { status: 500 });
+  }
+  if (structured && typeof structured === "object" && "handled" in structured && structured.handled) {
+    if ("valid" in structured && !structured.valid) {
+      const feedback = "feedback" in structured && typeof structured.feedback === "string" ? structured.feedback : "Revise sua resposta e tente novamente.";
+      await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: feedback, metadata: { reason: "automation_response_invalid" } });
+      await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "automation.response_invalid", entity_type: "message", entity_id: patientMessage.id, metadata: { conversation_id: conversation.id } });
+      return new Response(feedback, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-question": "invalid" } });
+    }
+    return new Response(null, { status: 204, headers: { "x-apollomd-question": "answered" } });
+  }
 
   const staleAt = new Date(Date.now() - AI_CONFIG.generationLockSeconds * 1000).toISOString();
   await admin.from("conversations").update({ generation_started_at: null }).eq("id", conversation.id).eq("mode", "ai").lt("generation_started_at", staleAt);
