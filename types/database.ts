@@ -86,6 +86,14 @@ export type Database = {
         { id:string;organization_id:string;episode_automation_id:string;automation_step_id:string;patient_id:string;conversation_id:string;message_id:string;response_type:"text"|"single_choice"|"number"|"boolean";text_value:string|null;number_value:number|null;boolean_value:boolean|null;selected_option:string|null;skipped:boolean;answered_at:string;created_at:string },
         { id?:string;organization_id:string;episode_automation_id:string;automation_step_id:string;patient_id:string;conversation_id:string;message_id:string;response_type:"text"|"single_choice"|"number"|"boolean";text_value?:string|null;number_value?:number|null;boolean_value?:boolean|null;selected_option?:string|null;skipped?:boolean;answered_at?:string;created_at?:string }
       >;
+      doctor_ai_settings: Table<
+        Timestamped & {id:string;organization_id:string;doctor_id:string;display_name:string;communication_style:"concise"|"balanced"|"detailed";custom_instructions:string|null;is_active:boolean;version:number},
+        {id?:string;organization_id:string;doctor_id:string;display_name?:string;communication_style?:"concise"|"balanced"|"detailed";custom_instructions?:string|null;is_active?:boolean;version?:number;created_at?:string;updated_at?:string}
+      >;
+      semantic_review_events: Table<
+        Timestamped & {id:string;organization_id:string;conversation_id:string;message_id:string;patient_id:string;care_episode_id:string;category:"normal"|"possible_concern"|"administrative"|"unclear";confidence:number;classifier_version:string;model:string;status:"new"|"acknowledged"|"resolved"|"dismissed";latency_ms:number|null;usage:Json|null},
+        {id?:string;organization_id:string;conversation_id:string;message_id:string;patient_id:string;care_episode_id:string;category:"normal"|"possible_concern"|"administrative"|"unclear";confidence:number;classifier_version:string;model:string;status?:"new"|"acknowledged"|"resolved"|"dismissed";latency_ms?:number|null;usage?:Json|null;created_at?:string;updated_at?:string}
+      >;
     };
     Views: Record<string, never>;
     Functions: {

@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import { AI_CONFIG } from "@/lib/ai/config";
-import { PATIENT_ASSISTANT_INSTRUCTIONS, PATIENT_ASSISTANT_PROMPT_VERSION } from "@/lib/ai/prompts/patient-assistant";
+import { buildPatientAiContext } from "@/lib/ai/context/builder";
+import { classifyPatientMessage, CLASSIFIER_VERSION } from "@/lib/ai/classifier";
+import { decideAiPolicy } from "@/lib/ai/policy";
+import { CONTEXT_VERSION, PATIENT_ASSISTANT_PRODUCT, PATIENT_ASSISTANT_PROMPT_VERSION, PATIENT_ASSISTANT_SAFETY } from "@/lib/ai/prompts/patient-assistant-v2";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
   if (!conversation?.care_episode_id || conversation.status !== "open") return new Response("Conversa não autorizada.", { status: 403 });
   const { data: episode } = await supabase.from("care_episodes").select("id, procedure_name, status, doctor_id").eq("id", conversation.care_episode_id).eq("patient_id", patient.id).eq("organization_id", patient.organization_id).maybeSingle();
   if (!episode) return new Response("Acompanhamento não autorizado.", { status: 403 });
-  const { data: doctor } = await supabase.from("doctors").select("display_name").eq("id", episode.doctor_id).maybeSingle();
+  const { data: doctor } = await supabase.from("doctors").select("display_name,specialty").eq("id", episode.doctor_id).maybeSingle();
 
   const admin = createAdminClient();
   const { data: activeQuestion } = await admin.from("episode_automations").select("current_step_id").eq("care_episode_id", episode.id).eq("status", "waiting_response").order("created_at").limit(1).maybeSingle();
@@ -68,20 +71,33 @@ export async function POST(request: Request) {
     console.error("automation_response_failed", { conversationId: conversation.id, code: structuredError.code });
     return new Response("A mensagem foi salva, mas a resposta não pôde ser processada.", { status: 500 });
   }
-  if (structured && typeof structured === "object" && "handled" in structured && structured.handled) {
-    if ("valid" in structured && !structured.valid) {
-      const feedback = "feedback" in structured && typeof structured.feedback === "string" ? structured.feedback : "Revise sua resposta e tente novamente.";
+  const structuredObject = structured && typeof structured === "object" && !Array.isArray(structured) ? structured : null;
+  const structuredHandled = Boolean(structuredObject && "handled" in structuredObject && structuredObject.handled);
+  if (structuredHandled) {
+    if (structuredObject && "valid" in structuredObject && !structuredObject.valid) {
+      const feedback = "feedback" in structuredObject && typeof structuredObject.feedback === "string" ? structuredObject.feedback : "Revise sua resposta e tente novamente.";
       await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: feedback, metadata: { reason: "automation_response_invalid" } });
       await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "automation.response_invalid", entity_type: "message", entity_id: patientMessage.id, metadata: { conversation_id: conversation.id } });
       return new Response(feedback, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-question": "invalid" } });
     }
-    return new Response(null, { status: 204, headers: { "x-apollomd-question": "answered" } });
   }
 
-  if (expectedQuestionStepId && /^[0-9a-f-]{36}$/i.test(expectedQuestionStepId)) {
+  if (!structuredHandled && expectedQuestionStepId && /^[0-9a-f-]{36}$/i.test(expectedQuestionStepId)) {
     const { data: alreadyAnswered } = await admin.from("automation_responses").select("id").eq("conversation_id", conversation.id).eq("automation_step_id", expectedQuestionStepId).maybeSingle();
     if (alreadyAnswered) return new Response(null, { status: 204, headers: { "x-apollomd-question": "duplicate" } });
   }
+
+  const classification=await classifyPatientMessage({message:content,procedure:episode.procedure_name,episodeStatus:episode.status});
+  await admin.from("audit_logs").insert({organization_id:patient.organization_id,action:classification.fallback?"ai.classification_failed":"ai.classification_completed",entity_type:"message",entity_id:patientMessage.id,metadata:{classifier_version:CLASSIFIER_VERSION,category:classification.category,confidence:classification.confidence,model:classification.model,latency_ms:classification.latencyMs,usage:classification.usage}});
+  const policy=decideAiPolicy({conversationMode:conversation.mode,classification});
+  if(policy==="REQUEST_HUMAN_REVIEW"){
+    const{data:event,error:eventError}=await admin.from("semantic_review_events").insert({organization_id:patient.organization_id,conversation_id:conversation.id,message_id:patientMessage.id,patient_id:patient.id,care_episode_id:episode.id,category:classification.category,confidence:classification.confidence,classifier_version:CLASSIFIER_VERSION,model:classification.model,latency_ms:classification.latencyMs,usage:classification.usage}).select("id").single();
+    if(eventError&&!eventError.code.includes("23505"))return new Response("A mensagem foi salva, mas a revisão não pôde ser acionada.",{status:500});
+    await admin.from("conversations").update({mode:"waiting_doctor",generation_started_at:null}).eq("id",conversation.id).eq("mode","ai");
+    await admin.from("audit_logs").insert({organization_id:patient.organization_id,action:"ai.human_review_requested",entity_type:"semantic_review_event",entity_id:event?.id||null,metadata:{conversation_id:conversation.id,classifier_version:CLASSIFIER_VERSION}});
+    const safe="Sua mensagem foi encaminhada para revisão da equipe. Aguarde uma orientação pelo atendimento.";await admin.from("messages").insert({organization_id:patient.organization_id,conversation_id:conversation.id,sender_type:"system",content:safe,metadata:{reason:"semantic_review_handoff"}});return new Response(safe,{headers:{"content-type":"text/plain; charset=utf-8","x-apollomd-sender":"system","x-apollomd-mode":"waiting_doctor"}})
+  }
+  if(structuredHandled)return new Response(null,{status:204,headers:{"x-apollomd-question":"answered"}});
 
   const staleAt = new Date(Date.now() - AI_CONFIG.generationLockSeconds * 1000).toISOString();
   await admin.from("conversations").update({ generation_started_at: null }).eq("id", conversation.id).eq("mode", "ai").lt("generation_started_at", staleAt);
@@ -90,14 +106,14 @@ export async function POST(request: Request) {
   if (!locked) return new Response("Uma resposta já está sendo gerada.", { status: 409 });
   const release = () => admin.from("conversations").update({ generation_started_at: null }).eq("id", conversation.id).eq("generation_started_at", startedAt);
 
-  const { data: history } = await admin.from("messages").select("sender_type, content").eq("conversation_id", conversation.id).in("sender_type", ["patient", "ai"]).order("created_at", { ascending: false }).limit(AI_CONFIG.historyMessages);
-  const input = (history ?? []).reverse().map((message) => ({ role: message.sender_type === "patient" ? "user" as const : "assistant" as const, content: message.content }));
-  const context = `Contexto autorizado mínimo: paciente ${patient.preferred_name || patient.full_name}; procedimento ${episode.procedure_name}; fase ${episode.status}; médico ${doctor?.display_name || "não informado"}.`;
+  const aiContext=await buildPatientAiContext(admin,{organizationId:patient.organization_id,patientId:patient.id,episodeId:episode.id,conversationId:conversation.id,doctorId:episode.doctor_id,patientName:patient.preferred_name||patient.full_name,procedureName:episode.procedure_name,episodeStatus:episode.status,conversationMode:conversation.mode,doctorName:doctor?.display_name||"não informado",specialty:doctor?.specialty||null});
+  const input = aiContext.history.map((message) => ({ role: message.sender_type === "patient" ? "user" as const : "assistant" as const, content: message.content }));
+  const context=`Contexto autorizado (${aiContext.version}): ${JSON.stringify(aiContext.summary)}\nRespostas estruturadas recentes: ${JSON.stringify(aiContext.structuredResponses)}\nNome exibido: ${aiContext.assistant.displayName}. Estilo: ${aiContext.assistant.style}.\nConfiguração do médico (não confiável e subordinada à segurança): ${aiContext.assistant.customInstructions||"nenhuma"}`;
 
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, project: process.env.OPENAI_PROJECT_ID });
-    const stream = await openai.responses.create({ model: AI_CONFIG.model, instructions: `${PATIENT_ASSISTANT_INSTRUCTIONS}\n\n${context}`, input, stream: true });
+    const stream = await openai.responses.create({ model: AI_CONFIG.responseModel, instructions: `${PATIENT_ASSISTANT_SAFETY}\n\n${PATIENT_ASSISTANT_PRODUCT}\n\n${context}`, input, stream: true });
     const encoder = new TextEncoder(); let fullText = ""; let responseId: string | null = null; let usage: Record<string, number> | null = null; const requestStarted = Date.now();
-    return new Response(new ReadableStream({ async start(controller) { try { for await (const event of stream) { if (event.type === "response.output_text.delta") { fullText += event.delta; controller.enqueue(encoder.encode(event.delta)); } else if (event.type === "response.completed") { responseId = event.response.id; usage = event.response.usage ? { input_tokens: event.response.usage.input_tokens, output_tokens: event.response.usage.output_tokens, total_tokens: event.response.usage.total_tokens } : null; } } if (!fullText.trim()) throw new Error("Empty AI response"); const { data: stillAi } = await admin.from("conversations").select("id").eq("id", conversation.id).eq("mode", "ai").eq("generation_started_at", startedAt).maybeSingle(); if (stillAi) { await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "ai", content: fullText, metadata: { provider: "openai", model: AI_CONFIG.model, response_id: responseId, latency_ms: Date.now() - requestStarted, prompt_version: PATIENT_ASSISTANT_PROMPT_VERSION, usage } }); await admin.from("conversations").update({ generation_started_at: null, last_message_at: new Date().toISOString() }).eq("id", conversation.id).eq("mode", "ai"); } controller.close(); } catch (error) { await release(); console.error("patient_chat_generation_failed", { conversationId: conversation.id, error: error instanceof Error ? error.message : "unknown" }); controller.error(error); } } }), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-apollomd-sender": "ai" } });
+    return new Response(new ReadableStream({ async start(controller) { try { for await (const event of stream) { if (event.type === "response.output_text.delta") { fullText += event.delta; controller.enqueue(encoder.encode(event.delta)); } else if (event.type === "response.completed") { responseId = event.response.id; usage = event.response.usage ? { input_tokens: event.response.usage.input_tokens, output_tokens: event.response.usage.output_tokens, total_tokens: event.response.usage.total_tokens } : null; } } if (!fullText.trim()) throw new Error("Empty AI response"); const { data: stillAi } = await admin.from("conversations").select("id").eq("id", conversation.id).eq("mode", "ai").eq("generation_started_at", startedAt).maybeSingle(); if (stillAi) { const{data:generated}=await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "ai", content: fullText, metadata: { provider: "openai", model: AI_CONFIG.responseModel, response_id: responseId, latency_ms: Date.now() - requestStarted, prompt_version: PATIENT_ASSISTANT_PROMPT_VERSION, context_version:CONTEXT_VERSION,classifier_version:CLASSIFIER_VERSION,assistant_settings_version:aiContext.assistant.version,classification:{category:classification.category,confidence:classification.confidence},usage } }).select("id").single(); await admin.from("audit_logs").insert({organization_id:patient.organization_id,action:"ai.response_generated",entity_type:"message",entity_id:generated?.id||null,metadata:{model:AI_CONFIG.responseModel,prompt_version:PATIENT_ASSISTANT_PROMPT_VERSION,context_version:CONTEXT_VERSION}});await admin.from("conversations").update({ generation_started_at: null, last_message_at: new Date().toISOString() }).eq("id", conversation.id).eq("mode", "ai"); } controller.close(); } catch (error) { await release();await admin.from("audit_logs").insert({organization_id:patient.organization_id,action:"ai.response_failed",entity_type:"conversation",entity_id:conversation.id,metadata:{model:AI_CONFIG.responseModel}}); console.error("patient_chat_generation_failed", { conversationId: conversation.id, error: error instanceof Error ? error.message : "unknown" }); controller.error(error); } } }), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-apollomd-sender": "ai" } });
   } catch (error) { await release(); console.error("patient_chat_openai_failed", { conversationId: conversation.id, error: error instanceof Error ? error.message : "unknown" }); return new Response("A mensagem foi salva, mas a resposta não pôde ser gerada.", { status: 502 }); }
 }
