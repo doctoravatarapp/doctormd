@@ -1,0 +1,1 @@
+export default function AdminLoading() { return <main className="admin-content" aria-busy="true"><div className="skeleton skeleton-title" /><section className="metric-grid">{Array.from({ length: 4 }, (_, index) => <div className="skeleton skeleton-card" key={index} />)}</section><div className="skeleton skeleton-list" /></main>; }

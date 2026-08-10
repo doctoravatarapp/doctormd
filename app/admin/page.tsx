@@ -3,11 +3,15 @@ import { PageHeader } from "@/components/admin/page-header";
 import { getAdminContext } from "@/lib/auth/context";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { loadOperationalQueue } from "@/lib/operations/load-queue";
+import { PRIORITY_LABELS, REASON_LABELS } from "@/lib/operations/priority";
 
 export default async function DashboardPage() {
   const context = await getAdminContext();
   const supabase = await createClient();
   const organizationId = context.organization?.id;
+  const operationQueue = organizationId ? await loadOperationalQueue(supabase, organizationId) : [];
+  const attentionNow = operationQueue.filter((item) => item.operation.priority === "urgent" || item.operation.priority === "high").sort((a, b) => a.operation.since.localeCompare(b.operation.since)).slice(0, 5);
 
   const emptyCount = { count: 0 };
   const [patients, episodes, conversations, alerts] = organizationId
@@ -44,6 +48,7 @@ export default async function DashboardPage() {
         ].map(([label, value, icon]) => <article className="metric-card" key={String(label)}><span>{icon}</span><strong>{value}</strong><p>{label}</p></article>)}
       </section>
       <section className="automation-metrics panel"><div><strong>{activeAutomations.count ?? 0}</strong><span>Acompanhamentos automatizados</span></div><div><strong>{scheduledMessages.count ?? 0}</strong><span>Mensagens programadas</span></div><div><strong>{automationFailures.count ?? 0}</strong><span>Falhas de automação</span></div></section>
+      <section className="panel"><div className="panel-title"><h2>Atenção agora</h2><Link href="/admin/operations">Ver Central Operacional</Link></div>{attentionNow.length ? attentionNow.map((item) => <Link className="compact-row" href={`/admin/episodes/${item.id}`} key={item.id}><div><strong>{item.patientName} · {PRIORITY_LABELS[item.operation.priority]}</strong><small>{item.operation.reasons.map((reason) => REASON_LABELS[reason]).join(" · ")}</small></div><span>Abrir →</span></Link>) : <EmptyState icon="✓" title="Sem atenção operacional pendente" description="Nenhum acompanhamento está em prioridade alta agora." />}</section>
       <section className="dashboard-grid">
         <article className="panel panel-wide"><div className="panel-title"><h2>Conversas recentes</h2><span>Atualizado agora</span></div><EmptyState icon="◌" title="Nenhuma conversa ainda" description="As conversas dos pacientes aparecerão aqui quando forem iniciadas." /></article>
         <article className="panel"><div className="panel-title"><h2>Necessitam atenção</h2></div>{attention?.length?attention.map(item=><Link className="attention-row" href={`/admin/conversations/${item.conversation_id}`} key={item.id}><div><strong>{item.patient_id?attentionNames.get(item.patient_id):"Paciente"}</strong><span>{item.rule_id?attentionRuleNames.get(item.rule_id):"Alerta"} · {item.severity}</span></div><p>{item.message_id?`${attentionText.get(item.message_id)?.slice(0,80)??""}${(attentionText.get(item.message_id)?.length??0)>80?"…":""}`:""}</p><small>{item.status} · aguardando desde {new Intl.DateTimeFormat("pt-BR",{hour:"2-digit",minute:"2-digit"}).format(new Date(item.created_at))}</small></Link>):<EmptyState icon="△" title="Tudo tranquilo" description="Nenhum alerta ou intervenção pendente." />}</article>

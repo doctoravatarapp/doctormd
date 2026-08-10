@@ -1,0 +1,2 @@
+export function PageToolbar({ children }: { children: React.ReactNode }) { return <section className="page-toolbar" aria-label="Ferramentas da página">{children}</section>; }
+export function SearchInput({ name = "q", defaultValue, placeholder }: { name?: string; defaultValue?: string; placeholder: string }) { return <label className="search-input"><span aria-hidden>⌕</span><input name={name} defaultValue={defaultValue} placeholder={placeholder} aria-label={placeholder} /></label>; }

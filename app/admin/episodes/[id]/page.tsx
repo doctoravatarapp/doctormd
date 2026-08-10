@@ -5,6 +5,7 @@ import { getAdminContext } from "@/lib/auth/context";
 import { createClient } from "@/lib/supabase/server";
 import { assignAutomation, controlAutomation } from "./actions";
 import { generateEpisodeSummary } from "./summary-actions";
+import { calculateOperationalPriority, PRIORITY_LABELS, REASON_LABELS } from "@/lib/operations/priority";
 
 type SummaryItem = { text: string; source_message_ids: string[]; source_response_ids: string[]; source_alert_ids: string[] };
 type SummaryContent = { overview: string; key_patient_reports: SummaryItem[]; structured_answers: SummaryItem[]; alerts_summary: SummaryItem[]; human_interventions: SummaryItem[]; current_state: string };
@@ -21,7 +22,7 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
   const [{ data: patient }, { data: doctor }, { data: conversations }, { data: flows }, { data: assignments }, { data: summaries }] = await Promise.all([
     db.from("patients").select("id,full_name,preferred_name").eq("id", episode.patient_id).single(),
     db.from("doctors").select("display_name,specialty").eq("id", episode.doctor_id).single(),
-    db.from("conversations").select("id,status,mode,last_message_at,created_at,updated_at").eq("care_episode_id", id),
+    db.from("conversations").select("id,status,mode,last_message_at,created_at,updated_at,taken_over_at").eq("care_episode_id", id),
     db.from("automation_flows").select("id,name,version").eq("organization_id", context.organization.id).eq("status", "active").order("name"),
     db.from("episode_automations").select("id,flow_id,flow_version,status,current_step_id,created_at,updated_at,completed_at").eq("care_episode_id", id).order("created_at", { ascending: false }),
     db.from("episode_ai_summaries").select("id,summary_version,status,source_updated_at,overview,structured_content,model,prompt_version,generated_at,created_at").eq("care_episode_id", id).order("summary_version", { ascending: false }).limit(20),
@@ -51,6 +52,7 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
   const generating = summaries?.some((row) => row.status === "generating");
   const stale = Boolean(latestSummary && latestSource > latestSummary.source_updated_at);
   const summary = latestSummary?.structured_content as SummaryContent | null;
+  const operational = calculateOperationalPriority({ conversation: conversation ? { mode: conversation.mode, updatedAt: conversation.updated_at, takenOverAt: conversation.taken_over_at } : null, deterministicAlerts: (redFlags ?? []).map((row) => ({ severity: row.severity, status: row.status, createdAt: row.created_at })), semanticAlerts: (semanticAlerts ?? []).map((row) => ({ status: row.status, createdAt: row.created_at })), automation: automation ? { status: automation.status, updatedAt: automation.updated_at } : null, actions: (actions ?? []).map((row) => ({ status: row.status, scheduledFor: row.scheduled_for, executedAt: row.executed_at, stepType: row.step_type })), latestPatientMessageAt: messages?.find((row) => row.sender_type === "patient")?.created_at ?? null });
   const timeline: TimelineItem[] = [
     { id: `episode-${id}`, at: episode.created_at, category: "Automação" as const, title: "Acompanhamento criado", detail: episode.procedure_name },
     ...(actions ?? []).map((row) => ({ id: `action-${row.id}`, at: row.executed_at ?? row.scheduled_for, category: "Automação" as const, title: row.status === "completed" ? "Etapa de automação executada" : "Etapa de automação programada", detail: row.step_name })),
@@ -72,6 +74,8 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
       <article className="panel info-card"><h2>Cabeçalho do acompanhamento</h2><dl><div><dt>Paciente</dt><dd><Link href={`/admin/patients/${episode.patient_id}`}>{patient?.full_name}</Link></dd></div><div><dt>Médico responsável</dt><dd>{doctor?.display_name || "Não encontrado"}</dd></div><div><dt>Procedimento</dt><dd>{episode.procedure_name}</dd></div><div><dt>Data</dt><dd>{episode.procedure_date || "Não informada"}</dd></div><div><dt>Status / fase</dt><dd>{episode.status}</dd></div><div><dt>Conversa</dt><dd>{conversationMode(conversation?.mode)}</dd></div><div><dt>Automação atual</dt><dd>{automation?.status || "Nenhuma"}</dd></div></dl></article>
       <article className="panel"><h2>Visão rápida</h2><div className="detail-grid"><Quick label="Conversa" value={conversationMode(conversation?.mode)} /><Quick label="Automação" value={automation?.status || "Nenhuma"} /><Quick label="Alertas abertos" value={String(openAlerts)} /><Quick label="Última interação" value={format(conversation?.last_message_at ?? null)} /><Quick label="Próxima ação" value={nextAction ? format(nextAction.scheduled_for) : automation?.status === "waiting_response" ? "Aguardando paciente" : "Nenhuma"} /></div></article>
     </section>
+
+    <section className={`panel operation-item priority-${operational.priority}`}><p className="eyebrow">SITUAÇÃO OPERACIONAL — NÃO CLÍNICA</p><h2>Prioridade: {PRIORITY_LABELS[operational.priority]}</h2><ul>{operational.reasons.map((reason) => <li key={reason}>{REASON_LABELS[reason]}</li>)}</ul><p>Desde: {format(operational.since)}</p></section>
 
     <section className="panel"><div className="section-heading"><div><p className="eyebrow">GERADO POR IA</p><h2>Resumo APolloMD</h2></div>{stale ? <span className="status-pill warning">Atualização disponível</span> : latestSummary ? <span className="status-pill">Atualizado</span> : null}</div>
       {!summary ? <p>Nenhum resumo gerado ainda.</p> : <><SummaryBlock title="Visão geral" text={summary.overview} /><SummaryList title="Relatos do paciente" items={summary.key_patient_reports} /><SummaryList title="Respostas coletadas" items={summary.structured_answers} /><SummaryList title="Alertas" items={summary.alerts_summary} /><SummaryList title="Intervenções" items={summary.human_interventions} /><SummaryBlock title="Estado atual descrito pela IA" text={summary.current_state} /><small>Versão {latestSummary?.summary_version} · {latestSummary?.model} · {latestSummary?.prompt_version} · {format(latestSummary?.generated_at ?? null)}</small></>}

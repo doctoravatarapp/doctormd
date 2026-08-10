@@ -1,7 +1,8 @@
-import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
-import Link from "next/link";
+import { SettingsNav } from "@/components/admin/settings-nav";
+import { getAdminContext } from "@/lib/auth/context";
 
-export default function SettingsPage() {
-  return <main className="admin-content"><PageHeader eyebrow="CONFIGURAÇÕES" title="Sua operação, do seu jeito." description="Preferências e regras operacionais da organização." /><section className="panel settings-links"><Link href="/admin/settings/red-flags"><strong>Regras de RED Flags</strong><span>Configurar termos explícitos e severidades →</span></Link><Link href="/admin/settings/assistant"><strong>Assistente de IA</strong><span>Personalizar comunicação por médico →</span></Link></section><section className="panel"><EmptyState icon="⚙" title="Configurações seguras" description="Preferências operacionais nunca substituem as regras de segurança." /></section></main>;
+export default async function SettingsPage() {
+  const context = await getAdminContext();
+  return <main className="admin-content"><PageHeader eyebrow="SISTEMA" title="Configurações" description="Preferências da organização e do atendimento." /><div className="settings-layout"><SettingsNav active="Geral" /><section className="settings-content"><article className="panel"><h2>Geral</h2><p className="muted-copy">Informações principais do ambiente APolloMD.</p><dl className="settings-definition"><div><dt>Organização</dt><dd>{context.organization?.name}</dd></div><div><dt>Identificador</dt><dd>{context.organization?.slug}</dd></div><div><dt>Seu papel</dt><dd>{context.role}</dd></div></dl></article><article className="panel" id="organization"><h2>Segurança da organização</h2><p className="muted-copy">Preferências operacionais nunca substituem autorização, RLS ou regras de segurança.</p></article></section></div></main>;
 }
