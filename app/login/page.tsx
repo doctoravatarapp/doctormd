@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login } from "./actions";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string; next?: string }>;
@@ -19,6 +20,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <span className="brand-mark">A</span>
         <span>APolloMD</span>
       </Link>
+      <Breadcrumbs className="auth-breadcrumbs" />
       <section className="auth-card">
         <p className="eyebrow">ÁREA ADMINISTRATIVA</p>
         <h1>Bem-vindo de volta.</h1>

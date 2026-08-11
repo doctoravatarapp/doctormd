@@ -114,6 +114,40 @@ export async function updateTeamMember(form: FormData) {
   redirect("/admin/team?saved=updated");
 }
 
+export async function sendTeamAccessLink(form: FormData) {
+  const context = await requireTeamManager();
+  const membershipId = value(form, "membership_id");
+  if (!membershipId) redirect("/admin/team?error=validation");
+
+  const admin = createAdminClient();
+  const { data: member } = await admin
+    .from("organization_memberships")
+    .select("id,user_id")
+    .eq("id", membershipId)
+    .eq("organization_id", context.organization.id)
+    .maybeSingle();
+  if (!member) redirect("/admin/team?error=not_found");
+
+  const { data: authUser, error: userError } = await admin.auth.admin.getUserById(member.user_id);
+  const email = authUser.user?.email;
+  if (userError || !email) redirect("/admin/team?error=email");
+
+  const { error } = await admin.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appUrl()}/auth/callback?next=/set-password`,
+  });
+  if (error) redirect("/admin/team?error=email");
+
+  await admin.from("audit_logs").insert({
+    organization_id: context.organization.id,
+    actor_user_id: context.user.id,
+    action: "team.access_link_sent",
+    entity_type: "organization_membership",
+    entity_id: member.id,
+    metadata: { user_id: member.user_id },
+  });
+  redirect("/admin/team?saved=access_sent");
+}
+
 export async function removeTeamMember(form: FormData) {
   const context = await requireTeamManager();
   const membershipId = value(form, "membership_id");

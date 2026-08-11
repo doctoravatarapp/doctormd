@@ -18,6 +18,7 @@ Este projeto não usa `localhost`, banco local, Docker Desktop, Supabase local n
 | Vercel | `lucianoterresrosa@gmail.com` | team `luciano-terres-projects` |
 | Google Cloud | `easywayconsultoria@gmail.com` | `avatar-504818` (`avatar`) |
 | OpenAI | conta autorizada do produto | API somente server-side |
+| Resend | conta autorizada do produto | domínio `apollomd.com.br`; SMTP do Supabase Auth |
 
 ## Procedimento de ativação
 
@@ -87,6 +88,19 @@ if [ -n "${OPENAI_API_KEY:-}" ]; then printf 'OPENAI_API_KEY=CONFIGURADA\n'; els
 
 Resultado esperado no ambiente cloud que executará a orquestração de IA: `CONFIGURADA`. Nunca faça essa chave chegar ao browser, logs, banco ou Git. A [documentação oficial OpenAI](https://developers.openai.com/api/reference/overview#authentication) determina que a chave seja carregada no servidor por variável de ambiente ou serviço de gestão de secrets.
 
+### 6. Resend / e-mails de autenticação
+
+Os convites e demais mensagens do Supabase Auth usam o SMTP customizado do Resend configurado diretamente no projeto `bscpfutlmsvbwgtkdudv`:
+
+- remetente: `APolloMD <doctor@apollomd.com.br>`
+- host: `smtp.resend.com`
+- porta: `587` (STARTTLS)
+- usuário SMTP: `resend`
+- senha SMTP: API key restrita do Resend, armazenada somente no cofre criptografado do Supabase
+- intervalo mínimo por usuário: `60` segundos
+
+O domínio `apollomd.com.br` deve permanecer verificado no Resend. A API key não pertence ao runtime web e não deve ser adicionada à Vercel, a arquivos `.env` ou ao repositório. Após qualquer troca de credencial, valide com um convite real para um endereço controlado e confira a entrega e os logs do Resend sem registrar conteúdo sensível.
+
 ## Procedimento de validação
 
 Antes de migrations, deploys ou alterações cloud, a validação só passa se todos os itens aplicáveis forem verdadeiros:
@@ -126,6 +140,7 @@ Não adicionar `SUPABASE_DB_PASSWORD` ao runtime web; ela deve ser restrita ao f
 
 - Produção/Preview web: armazenar como Environment Variables protegidas no projeto Vercel correto, separadas por ambiente.
 - Supabase: credenciais administrativas permanecem no provedor e no armazenamento seguro da CLI/operador autorizado.
+- Resend: a chave de envio usada pelo Supabase Auth permanece exclusivamente no campo de senha do SMTP customizado do Supabase; nunca no código ou nas variáveis públicas da aplicação.
 - GCP: usar Secret Manager e service accounts de menor privilégio somente quando surgir um workload concreto no GCP.
 - Automations scheduler: GCP Cloud Scheduler no projeto `avatar-504818`, chamando a cada minuto o endpoint Vercel protegido por `CRON_SECRET`.
 - Desenvolvimento cloud: usar secrets do ambiente remoto, nunca arquivos `.env` versionados.
@@ -211,6 +226,7 @@ Classificação em 2026-08-07:
 - **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`; acesso ao `avatar-504818` validado; contexto local alterado de `staging-503122` para `avatar-504818`; conta possui `roles/owner` (permissão ampla, revisar menor privilégio futuramente). Nenhum recurso GCP adicional foi criado.
 - **CONFIGURADO/VALIDADO — OpenAI:** `OPENAI_API_KEY` armazenada como variável `Encrypted`, exclusivamente em Production na Vercel. Valor não exibido.
 - **CRIADO — gestão de acessos:** CRUD de memberships em `/admin/team`, convite por Supabase Auth, ativação segura de senha, trilha de auditoria e proteções contra autoexclusão/remoção do último administrador.
+- **CONFIGURADO — e-mail transacional:** Supabase Auth configurado para enviar por Resend SMTP como `APolloMD <doctor@apollomd.com.br>`; configuração aceita pelo painel em 2026-08-11. Entrega real ainda deve ser confirmada com um novo convite controlado.
 - **CRIADO:** documentação operacional e de arquitetura/segurança, aplicação inicial e proteções de Git.
 - **SEGURANÇA:** nenhum arquivo `.env`, secret versionado ou código foi encontrado. O repositório vazio limita a auditoria ao estado atual.
 

@@ -17,6 +17,8 @@
   box-sizing: border-box;
 }
 
+.app-breadcrumbs{color:var(--ds-muted,var(--p-muted,#68766f));font-size:.66rem;min-width:0}.app-breadcrumbs ol{align-items:center;display:flex;gap:.45rem;list-style:none;margin:0;min-width:0;overflow:hidden;padding:0}.app-breadcrumbs li{align-items:center;display:flex;gap:.45rem;min-width:0;white-space:nowrap}.app-breadcrumbs li:last-child{overflow:hidden}.app-breadcrumbs a{color:inherit;text-decoration:none}.app-breadcrumbs a:hover{color:var(--ds-primary,var(--p-primary,#1f6a4e));text-decoration:underline}.app-breadcrumbs [aria-current="page"]{color:var(--ds-ink,var(--p-ink,#18221d));font-weight:700;overflow:hidden;text-overflow:ellipsis}.app-breadcrumbs li>span[aria-hidden]{color:#a5afa9}
+
 html {
   scroll-behavior: smooth;
 }
@@ -462,6 +464,12 @@ h1 span {
   left: clamp(1.25rem, 4vw, 4rem);
   position: absolute;
   top: 1.5rem;
+}
+
+.auth-breadcrumbs {
+  left: clamp(1.25rem, 4vw, 4rem);
+  position: absolute;
+  top: 4.5rem;
 }
 
 .auth-card {

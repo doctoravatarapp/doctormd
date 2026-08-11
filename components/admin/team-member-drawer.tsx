@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { removeTeamMember, updateTeamMember } from "@/app/admin/team/actions";
+import { removeTeamMember, sendTeamAccessLink, updateTeamMember } from "@/app/admin/team/actions";
 
 type Member = {
   id: string;
+  email: string | null;
   name: string;
   role: "organization_admin" | "doctor" | "staff";
   status: "active" | "invited" | "inactive";
@@ -26,6 +27,7 @@ export function TeamMemberDrawer({ member }: { member: Member }) {
           <label>Status<select name="status" defaultValue={member.status === "invited" ? "inactive" : member.status} disabled={member.isCurrentUser}><option value="active">Ativo</option><option value="inactive">Inativo</option></select>{member.isCurrentUser ? <input type="hidden" name="status" value={member.status} /> : null}</label>
           <button>Salvar alterações</button>
         </form>
+        {member.email ? <div className="drawer-secondary-zone"><strong>Link de acesso</strong><p>Envie um novo link seguro para este usuário definir ou recuperar a senha.</p><form action={sendTeamAccessLink}><input type="hidden" name="membership_id" value={member.id} /><button>Enviar novo link de acesso</button></form></div> : null}
         {!member.isCurrentUser ? <div className="drawer-danger-zone"><strong>Remover da organização</strong><p>O usuário perde o acesso a este ambiente, mas sua conta global não é apagada.</p><form action={removeTeamMember}><input type="hidden" name="membership_id" value={member.id} /><button className="danger-action">Remover acesso</button></form></div> : null}
       </section>
     </> : null}
