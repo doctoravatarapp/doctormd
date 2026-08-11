@@ -36,10 +36,10 @@ export async function createPatient(formData: FormData) {
 export async function updatePatient(formData: FormData) {
   const context = await getAdminContext();
   const id = String(formData.get("id") ?? "").trim();
-  if (!context.organization || !can(context.role, "patients:create")) redirect(`/admin/patients/${id}?error=access`);
+  if (!context.organization || !can(context.role, "patients:create")) redirect(`/admin/patients/${id}/edit?error=access`);
   const fullName = String(formData.get("full_name") ?? "").trim();
   const status = String(formData.get("status") ?? "active") as "active" | "inactive";
-  if (!id || fullName.length < 2 || !["active", "inactive"].includes(status)) redirect(`/admin/patients/${id}?error=validation`);
+  if (!id || fullName.length < 2 || !["active", "inactive"].includes(status)) redirect(`/admin/patients/${id}/edit?error=validation`);
   const supabase = await createClient();
   const { error } = await supabase.from("patients").update({
     full_name: fullName,
@@ -49,7 +49,7 @@ export async function updatePatient(formData: FormData) {
     birth_date: optional(formData.get("birth_date")),
     status,
   }).eq("id", id).eq("organization_id", context.organization.id);
-  if (error) redirect(`/admin/patients/${id}?error=save`);
+  if (error) redirect(`/admin/patients/${id}/edit?error=save`);
   revalidatePath("/admin/patients");
   revalidatePath(`/admin/patients/${id}`);
   redirect(`/admin/patients/${id}?saved=1`);

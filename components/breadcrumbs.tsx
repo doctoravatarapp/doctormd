@@ -20,6 +20,8 @@ const labels: Record<string, string> = {
   chat: "Conversa",
   login: "Entrar",
   "set-password": "Ativar acesso",
+  edit: "Editar paciente",
+  new: "Novo acompanhamento",
 };
 
 function isIdentifier(segment: string) {
