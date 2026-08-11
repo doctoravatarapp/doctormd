@@ -77,7 +77,7 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
 
     <section className={`panel operation-item priority-${operational.priority}`}><p className="eyebrow">SITUAÇÃO OPERACIONAL — NÃO CLÍNICA</p><h2>Prioridade: {PRIORITY_LABELS[operational.priority]}</h2><ul>{operational.reasons.map((reason) => <li key={reason}>{REASON_LABELS[reason]}</li>)}</ul><p>Desde: {format(operational.since)}</p></section>
 
-    <section className="panel"><div className="section-heading"><div><p className="eyebrow">GERADO POR IA</p><h2>Resumo APolloMD</h2></div>{stale ? <span className="status-pill warning">Atualização disponível</span> : latestSummary ? <span className="status-pill">Atualizado</span> : null}</div>
+    <section className="panel episode-summary"><div className="section-heading"><div><p className="eyebrow">GERADO POR IA</p><h2>Resumo APolloMD</h2></div>{stale ? <span className="status-pill warning">Atualização disponível</span> : latestSummary ? <span className="status-pill">Atualizado</span> : null}</div>
       {!summary ? <p>Nenhum resumo gerado ainda.</p> : <><SummaryBlock title="Visão geral" text={summary.overview} /><SummaryList title="Relatos do paciente" items={summary.key_patient_reports} /><SummaryList title="Respostas coletadas" items={summary.structured_answers} /><SummaryList title="Alertas" items={summary.alerts_summary} /><SummaryList title="Intervenções" items={summary.human_interventions} /><SummaryBlock title="Estado atual descrito pela IA" text={summary.current_state} /><small>Versão {latestSummary?.summary_version} · {latestSummary?.model} · {latestSummary?.prompt_version} · {format(latestSummary?.generated_at ?? null)}</small></>}
       <form action={generateEpisodeSummary}><input type="hidden" name="episode_id" value={id} /><button disabled={generating}>{generating ? "Gerando…" : latestSummary ? "Atualizar resumo" : "Gerar resumo"}</button></form>
       <p className="muted-copy">Representação operacional derivada. Consulte sempre as fontes originais abaixo.</p>
@@ -102,7 +102,7 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
   </main>;
 }
 
-function Quick({ label, value }: { label: string; value: string }) { return <div className="info-card"><small>{label}</small><strong>{value}</strong></div>; }
+function Quick({ label, value }: { label: string; value: string }) { return <div className="quick-stat"><small>{label}</small><strong>{value}</strong></div>; }
 function SummaryBlock({ title, text }: { title: string; text: string }) { return <section><h3>{title}</h3><p>{text}</p></section>; }
 function SummaryList({ title, items }: { title: string; items: SummaryItem[] }) { return <section><h3>{title}</h3>{items.length ? <ul>{items.map((item, index) => <li key={`${title}-${index}`}>{item.text} <SourceLinks item={item} /></li>)}</ul> : <p>Nenhum evento registrado.</p>}</section>; }
 function SourceLinks({ item }: { item: SummaryItem }) { const ids = [...item.source_message_ids.map((id) => `message-${id}`), ...item.source_response_ids.map((id) => `response-${id}`), ...item.source_alert_ids.map((id) => `alert-${id}`)]; return ids.length ? <>{ids.map((id, index) => <Link href={`#${id}`} key={id}> {index ? "· " : ""}Ver origem</Link>)}</> : null; }
