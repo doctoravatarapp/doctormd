@@ -30,6 +30,9 @@ function labelFor(segment: string, parent?: string) {
   if (labels[segment]) return labels[segment];
   if (isIdentifier(segment)) {
     if (parent === "patients") return "Detalhe do paciente";
+    if (parent === "doctors") return "Perfil do médico";
+    if (parent === "team") return "Perfil de acesso";
+    if (parent === "red-flags") return "Editar regra";
     if (parent === "conversations") return "Atendimento";
     if (parent === "automations") return "Editor do fluxo";
     if (parent === "episodes") return "Detalhe do acompanhamento";

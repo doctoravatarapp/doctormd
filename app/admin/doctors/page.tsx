@@ -3,9 +3,10 @@ import { PageHeader } from "@/components/admin/page-header";
 import { getAdminContext } from "@/lib/auth/context";
 import { can } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { createDoctor, toggleDoctorStatus, updateDoctor } from "./actions";
+import { createDoctor } from "./actions";
 import { FormDrawer } from "@/components/admin/form-drawer";
 import { PageToolbar, SearchInput } from "@/components/admin/page-toolbar";
+import Link from "next/link";
 
 export default async function DoctorsPage({ searchParams }: { searchParams: Promise<{ q?: string; created?: string; updated?: string; error?: string }> }) {
   const params = await searchParams;
@@ -28,6 +29,6 @@ export default async function DoctorsPage({ searchParams }: { searchParams: Prom
       {params.created || params.updated ? <p className="success-message">Médico salvo com sucesso.</p> : null}{params.error ? <p className="form-error">Não foi possível concluir a operação.</p> : null}
     </section>
     {manageable ? <FormDrawer label="Novo médico" title="Novo médico" description="Adicione um profissional à organização."><form action={createDoctor} className="drawer-form"><fieldset><legend>Informações básicas</legend><label>Nome de exibição<input name="display_name" required /></label><label>Especialidade<input name="specialty" /></label></fieldset><fieldset><legend>Registro profissional</legend><label>Número do registro<input name="professional_registration" /></label></fieldset><button>Cadastrar médico</button></form></FormDrawer> : null}
-    <section className="panel table-panel">{doctors?.length ? <div className="data-table">{doctors.map((doctor) => <article className="doctor-row" key={doctor.id}><span className="row-avatar">{doctor.display_name[0]}</span><div className="doctor-summary"><strong>{doctor.display_name}</strong><small>{doctor.specialty || "Especialidade não informada"} · {doctor.professional_registration || "Sem registro"}</small></div><span className="status-badge">{doctor.status === "active" ? "Ativo" : "Inativo"}</span><span className="episode-count">{counts.get(doctor.id) ?? 0} episódios ativos</span>{manageable ? <details><summary>Editar</summary><form action={updateDoctor} className="inline-edit"><input type="hidden" name="id" value={doctor.id} /><input name="display_name" defaultValue={doctor.display_name} required /><input name="specialty" defaultValue={doctor.specialty ?? ""} placeholder="Especialidade" /><input name="professional_registration" defaultValue={doctor.professional_registration ?? ""} placeholder="Registro" /><button>Salvar</button></form><form action={toggleDoctorStatus}><input type="hidden" name="id" value={doctor.id} /><input type="hidden" name="status" value={doctor.status} /><button className="text-button">{doctor.status === "active" ? "Inativar" : "Ativar"}</button></form></details> : null}</article>)}</div> : <EmptyState title="Nenhum médico" description="Cadastre o primeiro profissional da organização." />}</section>
+    <section className="panel table-panel">{doctors?.length ? <div className="data-table">{doctors.map((doctor) => <Link className="doctor-row" href={`/admin/doctors/${doctor.id}`} key={doctor.id}><span className="row-avatar">{doctor.display_name[0]}</span><div className="doctor-summary"><strong>{doctor.display_name}</strong><small>{doctor.specialty || "Especialidade não informada"} · {doctor.professional_registration || "Sem registro"}</small></div><span className="status-badge">{doctor.status === "active" ? "Ativo" : "Inativo"}</span><span className="episode-count">{counts.get(doctor.id) ?? 0} episódios ativos</span><span>→</span></Link>)}</div> : <EmptyState title="Nenhum médico" description="Cadastre o primeiro profissional da organização." />}</section>
   </main>;
 }

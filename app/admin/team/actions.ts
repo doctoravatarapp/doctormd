@@ -92,26 +92,28 @@ export async function updateTeamMember(form: FormData) {
   const fullName = value(form, "full_name");
   const role = value(form, "role") as typeof roles[number];
   const status = value(form, "status") as typeof statuses[number];
-  if (!membershipId || fullName.length < 2 || !roles.includes(role) || !statuses.includes(status)) redirect("/admin/team?error=validation");
+  const target = membershipId ? `/admin/team/${membershipId}` : "/admin/team";
+  if (!membershipId || fullName.length < 2 || !roles.includes(role) || !statuses.includes(status)) redirect(`${target}?error=validation`);
 
   const admin = createAdminClient();
   const { data: member } = await admin.from("organization_memberships").select("id,user_id,role,status").eq("id", membershipId).eq("organization_id", context.organization.id).maybeSingle();
   if (!member) redirect("/admin/team?error=not_found");
-  if (member.user_id === context.user.id && (role !== member.role || status !== member.status)) redirect("/admin/team?error=self");
+  if (member.user_id === context.user.id && (role !== member.role || status !== member.status)) redirect(`${target}?error=self`);
 
   if (member.role === "organization_admin" && member.status === "active" && (role !== "organization_admin" || status !== "active")) {
     const { count } = await admin.from("organization_memberships").select("id", { count: "exact", head: true }).eq("organization_id", context.organization.id).eq("role", "organization_admin").eq("status", "active");
-    if ((count ?? 0) <= 1) redirect("/admin/team?error=last_admin");
+    if ((count ?? 0) <= 1) redirect(`${target}?error=last_admin`);
   }
 
   const [{ error: profileError }, { error: membershipError }] = await Promise.all([
     admin.from("profiles").update({ full_name: fullName }).eq("id", member.user_id),
     admin.from("organization_memberships").update({ role, status }).eq("id", member.id).eq("organization_id", context.organization.id),
   ]);
-  if (profileError || membershipError) redirect("/admin/team?error=save");
+  if (profileError || membershipError) redirect(`${target}?error=save`);
   await admin.from("audit_logs").insert({ organization_id: context.organization.id, actor_user_id: context.user.id, action: "team.member_updated", entity_type: "organization_membership", entity_id: member.id, metadata: { role, status } });
   revalidatePath("/admin/team");
-  redirect("/admin/team?saved=updated");
+  revalidatePath(`/admin/team/${member.id}`);
+  redirect(`/admin/team/${member.id}?saved=updated`);
 }
 
 export async function sendTeamAccessLink(form: FormData) {
@@ -130,12 +132,12 @@ export async function sendTeamAccessLink(form: FormData) {
 
   const { data: authUser, error: userError } = await admin.auth.admin.getUserById(member.user_id);
   const email = authUser.user?.email;
-  if (userError || !email) redirect("/admin/team?error=email");
+  if (userError || !email) redirect(`/admin/team/${membershipId}?error=email`);
 
   const { error } = await admin.auth.resetPasswordForEmail(email, {
     redirectTo: `${appUrl()}/auth/callback?next=/set-password`,
   });
-  if (error) redirect("/admin/team?error=email");
+  if (error) redirect(`/admin/team/${membershipId}?error=email`);
 
   await admin.from("audit_logs").insert({
     organization_id: context.organization.id,
@@ -145,7 +147,7 @@ export async function sendTeamAccessLink(form: FormData) {
     entity_id: member.id,
     metadata: { user_id: member.user_id },
   });
-  redirect("/admin/team?saved=access_sent");
+  redirect(`/admin/team/${membershipId}?saved=access_sent`);
 }
 
 export async function removeTeamMember(form: FormData) {

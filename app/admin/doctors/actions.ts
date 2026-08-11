@@ -30,16 +30,17 @@ export async function updateDoctor(formData: FormData) {
   if (!context.organization || !can(context.role, "doctors:manage")) redirect("/admin/doctors?error=access");
   const id = clean(formData.get("id"));
   const displayName = clean(formData.get("display_name"));
-  if (!id || displayName.length < 2) redirect("/admin/doctors?error=validation");
+  if (!id || displayName.length < 2) redirect(id ? `/admin/doctors/${id}?error=validation` : "/admin/doctors?error=validation");
   const supabase = await createClient();
   const { error } = await supabase.from("doctors").update({
     display_name: displayName,
     specialty: clean(formData.get("specialty")) || null,
     professional_registration: clean(formData.get("professional_registration")) || null,
   }).eq("id", id).eq("organization_id", context.organization.id);
-  if (error) redirect("/admin/doctors?error=save");
+  if (error) redirect(`/admin/doctors/${id}?error=save`);
   revalidatePath("/admin/doctors");
-  redirect("/admin/doctors?updated=1");
+  revalidatePath(`/admin/doctors/${id}`);
+  redirect(`/admin/doctors/${id}?saved=1`);
 }
 
 export async function toggleDoctorStatus(formData: FormData) {
@@ -49,6 +50,8 @@ export async function toggleDoctorStatus(formData: FormData) {
   const status = clean(formData.get("status")) === "active" ? "inactive" : "active";
   const supabase = await createClient();
   const { error } = await supabase.from("doctors").update({ status }).eq("id", id).eq("organization_id", context.organization.id);
-  if (error) redirect("/admin/doctors?error=save");
+  if (error) redirect(`/admin/doctors/${id}?error=save`);
   revalidatePath("/admin/doctors");
+  revalidatePath(`/admin/doctors/${id}`);
+  redirect(`/admin/doctors/${id}?saved=1`);
 }
