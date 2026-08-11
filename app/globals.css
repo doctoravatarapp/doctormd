@@ -64,7 +64,7 @@ textarea {
 
 .site-header,
 .hero,
-footer {
+.page-shell > footer {
   margin-inline: auto;
   max-width: 1180px;
   position: relative;
@@ -315,7 +315,7 @@ h1 span {
   flex: 1;
 }
 
-.chat-composer {
+.chat-card .chat-composer {
   align-items: flex-end;
   background: #f8faf8;
   border: 1px solid var(--line);
@@ -325,7 +325,7 @@ h1 span {
   padding: 0.7rem;
 }
 
-.chat-composer textarea {
+.chat-card .chat-composer textarea {
   background: transparent;
   border: 0;
   color: var(--muted);
@@ -336,7 +336,7 @@ h1 span {
   width: 100%;
 }
 
-.chat-composer button {
+.chat-card .chat-composer button {
   align-items: center;
   background: var(--green);
   border: 0;
@@ -356,7 +356,7 @@ h1 span {
   text-align: center;
 }
 
-footer {
+.page-shell > footer {
   align-items: center;
   border-top: 1px solid var(--line);
   color: var(--muted);
@@ -366,13 +366,13 @@ footer {
   padding-block: 1.2rem;
 }
 
-footer span {
+.page-shell > footer span {
   color: var(--ink);
   font-family: var(--font-manrope), sans-serif;
   font-weight: 750;
 }
 
-footer p {
+.page-shell > footer p {
   margin: 0;
 }
 
@@ -435,7 +435,7 @@ footer p {
     min-height: 22rem;
   }
 
-  footer {
+  .page-shell > footer {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.4rem;
