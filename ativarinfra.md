@@ -118,6 +118,7 @@ Ambas estão configuradas em Production no projeto Vercel `apollomd`.
 - `OPENAI_PROJECT_ID` — opcional, quando a seleção explícita de projeto for necessária
 - `OPENAI_ORG_ID` — opcional, quando a seleção explícita de organização for necessária
 - `SUPABASE_SERVICE_ROLE_KEY` — necessária no runtime server-side do chat para persistir respostas da IA e controlar concorrência após validação do paciente sob RLS; nunca exposta ao browser
+- `NEXT_PUBLIC_SITE_URL` — URL canônica usada nos convites administrativos (`https://apollomd.vercel.app`); quando ausente, o runtime usa `VERCEL_PROJECT_PRODUCTION_URL` e, por último, a URL canônica de produção
 
 Não adicionar `SUPABASE_DB_PASSWORD` ao runtime web; ela deve ser restrita ao fluxo seguro de administração/migrations quando necessária. Atualize esta lista quando o contrato real for criado.
 
@@ -209,6 +210,7 @@ Classificação em 2026-08-07:
 - **CONFIGURADO/VALIDADO — Vercel:** conta `lucianoterresrosa@gmail.com`, team `luciano-terres-projects`, projeto `apollomd`, GitHub conectado, deployment Production Ready e URL pública `https://apollomd.vercel.app`; home e health retornam HTTP 200.
 - **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`; acesso ao `avatar-504818` validado; contexto local alterado de `staging-503122` para `avatar-504818`; conta possui `roles/owner` (permissão ampla, revisar menor privilégio futuramente). Nenhum recurso GCP adicional foi criado.
 - **CONFIGURADO/VALIDADO — OpenAI:** `OPENAI_API_KEY` armazenada como variável `Encrypted`, exclusivamente em Production na Vercel. Valor não exibido.
+- **CRIADO — gestão de acessos:** CRUD de memberships em `/admin/team`, convite por Supabase Auth, ativação segura de senha, trilha de auditoria e proteções contra autoexclusão/remoção do último administrador.
 - **CRIADO:** documentação operacional e de arquitetura/segurança, aplicação inicial e proteções de Git.
 - **SEGURANÇA:** nenhum arquivo `.env`, secret versionado ou código foi encontrado. O repositório vazio limita a auditoria ao estado atual.
 
