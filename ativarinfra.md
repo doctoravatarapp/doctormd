@@ -22,7 +22,7 @@ Este projeto não usa `localhost`, banco local, Docker Desktop, Supabase local n
 
 ## Procedimento de ativação
 
-Execute a partir da raiz do repositório. Os comandos desta seção foram testados nesta máquina em 2026-08-07.
+Execute a partir da raiz do repositório. Os comandos desta seção foram novamente validados nesta máquina em 2026-08-12.
 
 ### 1. Repositório e GitHub
 
@@ -99,7 +99,9 @@ Os convites e demais mensagens do Supabase Auth usam o SMTP customizado do Resen
 - senha SMTP: API key restrita do Resend, armazenada somente no cofre criptografado do Supabase
 - intervalo mínimo por usuário: `60` segundos
 
-O domínio `apollomd.com.br` deve permanecer verificado no Resend. A API key não pertence ao runtime web e não deve ser adicionada à Vercel, a arquivos `.env` ou ao repositório. Após qualquer troca de credencial, valide com um convite real para um endereço controlado e confira a entrega e os logs do Resend sem registrar conteúdo sensível.
+**Estado em 2026-08-12:** o SMTP foi aceito pelo Supabase, mas o domínio `apollomd.com.br` ainda não foi instalado/verificado no DNS e a entrega real do convite permanece pendente. Até a verificação, use somente o remetente/endereço de teste permitido pelo Resend para ensaios controlados; não considere o fluxo de convite pronto para produção. Quando o DNS estiver configurado, valide SPF/DKIM no painel do Resend, envie um novo convite para um endereço controlado e confira entrega e logs sem registrar conteúdo sensível.
+
+A API key não pertence ao runtime web e não deve ser adicionada à Vercel, a arquivos `.env` ou ao repositório.
 
 ## Procedimento de validação
 
@@ -131,8 +133,13 @@ Ambas estão configuradas em Production no projeto Vercel `apollomd`.
 - `OPENAI_API_KEY`
 - `OPENAI_PROJECT_ID` — opcional, quando a seleção explícita de projeto for necessária
 - `OPENAI_ORG_ID` — opcional, quando a seleção explícita de organização for necessária
+- `AI_RESPONSE_MODEL`, `AI_CLASSIFIER_MODEL`, `AI_SUMMARY_MODEL` — opcionais; mantêm os defaults versionados quando ausentes
+- `SEMANTIC_REVIEW_THRESHOLD` — opcional; limiar de encaminhamento semântico, com default versionado
 - `SUPABASE_SERVICE_ROLE_KEY` — necessária no runtime server-side do chat para persistir respostas da IA e controlar concorrência após validação do paciente sob RLS; nunca exposta ao browser
 - `NEXT_PUBLIC_SITE_URL` — URL canônica usada nos convites administrativos (`https://apollomd.vercel.app`); quando ausente, o runtime usa `VERCEL_PROJECT_PRODUCTION_URL` e, por último, a URL canônica de produção
+- `CRON_SECRET` — obrigatória para proteger `/api/internal/automations/run`; deve coincidir com o Bearer token configurado no Cloud Scheduler
+
+`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PATIENT_EMAIL`, `PATIENT_PASSWORD`, `APP_URL`, `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` são entradas de scripts operacionais/testes, não variáveis necessárias ao runtime web de produção.
 
 Não adicionar `SUPABASE_DB_PASSWORD` ao runtime web; ela deve ser restrita ao fluxo seguro de administração/migrations quando necessária. Atualize esta lista quando o contrato real for criado.
 
@@ -159,7 +166,7 @@ vercel deploy --prod --yes --scope luciano-terres-projects
 
 Pushes para `main` também disparam deploy pelo vínculo GitHub.
 
-Build de produção validado com Node 22 e pnpm 11:
+Build local validado com Node 22 e pnpm 11. O projeto declara Node `>=22`; a configuração atual da Vercel foi observada usando Node 24.x, que também satisfaz o contrato:
 
 ```bash
 corepack pnpm install --frozen-lockfile
@@ -215,27 +222,45 @@ Repita a consulta quando o ambiente tiver acesso de rede. Não conclua que a cre
 
 ## Estado atual
 
-Classificação em 2026-08-07:
+Classificação em 2026-08-12:
 
-- **CRIADO — aplicação:** Next.js 16.3.0, React 19.2.8, TypeScript 6.0.3, Tailwind CSS 4.3.3, Node 22 e pnpm 11.20.0; home responsiva e endpoint server-side `/api/health`.
-- **VALIDADO — aplicação:** lint, typecheck e build de produção passaram. Rotas geradas: `/` estática e `/api/health` dinâmica.
-- **CONFIGURADO/VALIDADO — GitHub:** `origin` oficial; branch `main`; commit inicial `2f8b2eb` enviado com sucesso para `doctoravatarapp/doctormd`. Não existe CI/CD além da futura integração Vercel.
-- **VALIDADO — GitHub:** conta ativa `g4trader`; repositório `doctoravatarapp/doctormd`; permissão `WRITE`. A consulta direta de membership da organização retornou 404, mas o acesso ao repositório foi confirmado.
-- **CONFIGURADO/VALIDADO — Supabase:** CLI vinculada a `bscpfutlmsvbwgtkdudv`; migration `20260807193000_product_foundation.sql` aplicada; 12 tabelas de fundação criadas com RLS; lint remoto sem erros; leitura e escrita anônimas em `patients` retornam HTTP 401.
-- **CONFIGURADO/VALIDADO — Vercel:** conta `lucianoterresrosa@gmail.com`, team `luciano-terres-projects`, projeto `apollomd`, GitHub conectado, deployment Production Ready e URL pública `https://apollomd.vercel.app`; home e health retornam HTTP 200.
-- **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`; acesso ao `avatar-504818` validado; contexto local alterado de `staging-503122` para `avatar-504818`; conta possui `roles/owner` (permissão ampla, revisar menor privilégio futuramente). Nenhum recurso GCP adicional foi criado.
-- **CONFIGURADO/VALIDADO — OpenAI:** `OPENAI_API_KEY` armazenada como variável `Encrypted`, exclusivamente em Production na Vercel. Valor não exibido.
-- **CRIADO — gestão de acessos:** CRUD de memberships em `/admin/team`, convite por Supabase Auth, ativação segura de senha, trilha de auditoria e proteções contra autoexclusão/remoção do último administrador.
-- **CONFIGURADO — e-mail transacional:** Supabase Auth configurado para enviar por Resend SMTP como `APolloMD <doctor@apollomd.com.br>`; configuração aceita pelo painel em 2026-08-11. Entrega real ainda deve ser confirmada com um novo convite controlado.
-- **CRIADO:** documentação operacional e de arquitetura/segurança, aplicação inicial e proteções de Git.
-- **SEGURANÇA:** nenhum arquivo `.env`, secret versionado ou código foi encontrado. O repositório vazio limita a auditoria ao estado atual.
+- **APLICAÇÃO:** Next.js 16.3.0, React 19.2.8, TypeScript 6.0.3, Tailwind CSS 4.3.3, pnpm 11.20.0 e Node `>=22`; portais de administrador e paciente, chat com IA/handoff humano, médicos, pacientes, episódios, alertas, automações, configurações e equipe.
+- **VALIDADO — aplicação:** typecheck e build de produção passaram em 2026-08-11; o deployment público e `/api/health` retornaram `status: ok` após a correção de rolagem do chat.
+- **CONFIGURADO/VALIDADO — GitHub:** `origin` oficial, branch `main`, conta com permissão `WRITE`. **Atenção:** antes desta atualização documental, `origin/main` permanecia em `b37e1c9` e o `main` local estava em `d9bf3b1`, com 8 commits funcionais ainda não enviados. Esta documentação adiciona mais um commit local. Não faça pull/reset/rebase destrutivo. Revise e envie esses commits intencionalmente antes de depender do GitHub como fonte integral do estado publicado.
+- **CONFIGURADO/VALIDADO — Supabase:** CLI vinculada exclusivamente a `bscpfutlmsvbwgtkdudv`, projeto `doctormd`, região `us-east-1`, estado `ACTIVE_HEALTHY`. Há 11 migrations versionadas, de `20260807193000_product_foundation.sql` a `20260810152000_episode_ai_summaries.sql`, cobrindo fundação, identidade/acesso, chat, proteção contra spoofing, red flags/takeover, automações interativas, IA contextual e resumos.
+- **CONFIGURADO/VALIDADO — Vercel:** conta `lucianoterresrosa@gmail.com`, identidade CLI `lucianoterresrosa-6245`, team `luciano-terres-projects`, projeto `apollomd`, URL `https://apollomd.vercel.app`. A produção atual foi publicada diretamente pela CLI a partir do commit local `d9bf3b1`; portanto pode estar à frente do GitHub.
+- **CONFIGURADO/VALIDADO — GCP:** conta ativa `easywayconsultoria@gmail.com`, projeto ativo `avatar-504818`. O Cloud Scheduler é o mecanismo documentado para chamar `/api/internal/automations/run` com `CRON_SECRET`; confirme o job antes de alterá-lo.
+- **CONFIGURADO/VALIDADO — OpenAI:** chave somente server-side armazenada como variável protegida da Vercel; chat, classificação de risco e resumos usam a Responses API. Valor nunca foi documentado.
+- **CRIADO — gestão de acessos:** CRUD de memberships em `/admin/team`, convite por Supabase Auth, ativação de senha, auditoria e proteções contra autoexclusão/remoção do último administrador.
+- **PENDENTE — e-mail transacional:** SMTP Resend salvo no Supabase Auth, porém domínio/DNS `apollomd.com.br` ainda não verificado e convite real não confirmado. Este é o principal item operacional pendente.
+- **UX/UI:** refoundation documentada em `docs/ux-ui-refoundation/FINAL-REPORT.md`; breadcrumbs globais, CRUDs por rotas, legibilidade, detalhe do paciente e preservação da rolagem do chat foram implementados após `b37e1c9`.
+- **SEGURANÇA:** não registrar ou imprimir secrets. Antes de dados reais, permanecem pendentes as decisões de compliance descritas abaixo.
 
 ### DECISÃO DE COMPLIANCE PENDENTE
 
 Antes de dados reais de pacientes: definir bases legais/consentimentos LGPD, retenção e exclusão, residência/transferência de dados, política de logs, backups, resposta a incidentes, operadores/controladores e uso de dados por provedores. Opções técnicas devem ser avaliadas com assessoria jurídica; nenhuma presunção clínica ou jurídica foi implementada.
 
+## Prompt de retomada para uma nova sessão
+
+Use este texto ao retomar o projeto:
+
+> Retome o APolloMD em `/Users/lucianoterres/Documents/GitHub/doctormd`. Leia integralmente `AGENTS.md` e `ativarinfra.md` antes de qualquer ação. O projeto é Cloud Only: não use localhost, Docker, Supabase local, banco local ou emuladores. Valide primeiro, sem expor secrets: GitHub `doctoravatarapp/doctormd`; Supabase `bscpfutlmsvbwgtkdudv`; Vercel team `luciano-terres-projects`, projeto `apollomd`; GCP `avatar-504818`; produção `https://apollomd.vercel.app`. Preserve alterações existentes. Compare `main`, `origin/main` e a produção antes de editar: em 2026-08-12 o local estava em `d9bf3b1`, o remoto em `b37e1c9` e a produção havia sido publicada do estado local. Verifique `git status`, identidades das CLIs, migrations remotas, variáveis apenas por nome/presença e `/api/health`. Não revele valores. O SMTP Resend está salvo no Supabase, mas o domínio `apollomd.com.br`/DNS e a entrega de convites ainda precisam ser validados. Depois informe divergências e riscos antes de qualquer ação mutável.
+
+## Checklist rápido de retomada
+
+1. Ler `AGENTS.md`, este arquivo e `docs/ux-ui-refoundation/FINAL-REPORT.md`.
+2. Executar as validações de identidade das seções 1 a 4, sem mudar recursos.
+3. Executar `git status --short --branch` e `git log --oneline --decorate -12`; não presumir que GitHub e produção estejam sincronizados.
+4. Conferir variáveis da Vercel apenas por nome/ambiente e nunca puxar ou imprimir seus valores.
+5. Conferir o projeto Supabase vinculado e a lista de migrations antes de qualquer mudança de banco.
+6. Verificar `https://apollomd.vercel.app/api/health`.
+7. Rodar lint, typecheck e build antes de publicar alterações.
+8. Resolver o domínio/DNS do Resend e validar um convite controlado antes de considerar e-mail pronto.
+
 ## Última validação
 
-- Data: 2026-08-07 (America/Sao_Paulo)
-- Codex/session: bootstrap inicial do APolloMD
-- Resultado: infraestrutura ativa — GitHub, Supabase, Vercel, GCP, OpenAI, deployment público e health check validados.
+- Data: 2026-08-12 (America/Sao_Paulo)
+- Estado local antes desta atualização documental: `main` em `d9bf3b1`; `origin/main` em `b37e1c9`; diferença de 8 commits funcionais. O commit deste documento passa a integrar a fila local ainda não enviada.
+- Identidades confirmadas em modo somente leitura: GitHub correto com `WRITE`; Supabase correto vinculado e `ACTIVE_HEALTHY`; Vercel conta/team/projeto corretos; GCP conta/projeto corretos.
+- Produção: projeto `apollomd` listado com `https://apollomd.vercel.app`; último health check funcional registrado em 2026-08-11.
+- Pendências principais: sincronizar conscientemente os 8 commits locais com GitHub; verificar DNS/domínio e entrega do Resend; concluir decisões de compliance antes de dados reais.
