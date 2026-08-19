@@ -18,6 +18,10 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
 export type Database = {
   public: {
     Tables: {
+      sales_leads: Table<
+        { id:string;created_at:string;full_name:string;email:string;phone:string|null;organization_name:string|null;team_size:"solo"|"2-5"|"6-15"|"16-50"|"51+"|null;primary_goal:"productivity"|"follow-up"|"patient-experience"|"automation"|"other"|null;consent_at:string;source:string;status:"new"|"contacted"|"qualified"|"won"|"lost";metadata:Json },
+        { id?:string;created_at?:string;full_name:string;email:string;phone?:string|null;organization_name?:string|null;team_size?:"solo"|"2-5"|"6-15"|"16-50"|"51+"|null;primary_goal?:"productivity"|"follow-up"|"patient-experience"|"automation"|"other"|null;consent_at:string;source?:string;status?:"new"|"contacted"|"qualified"|"won"|"lost";metadata?:Json }
+      >;
       organizations: Table<
         Timestamped & { id: string; name: string; slug: string; status: "active" | "suspended" | "inactive"; timezone: string },
         { id?: string; name: string; slug: string; status?: "active" | "suspended" | "inactive"; timezone?: string; created_at?: string; updated_at?: string }
