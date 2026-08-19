@@ -38,7 +38,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
       <header className="site-header">
         <a className="brand" href="#inicio" aria-label="APolloMD — início"><span className="brand-mark" aria-hidden="true">A</span><span>APolloMD</span></a>
         <nav className="site-nav" aria-label="Navegação principal"><a href="#beneficios">Benefícios</a><a href="#como-funciona">Como funciona</a><a href="#seguranca">Cuidado humano</a></nav>
-        <nav className="access-nav" aria-label="Acessos"><Link className="access-link access-link-secondary" href="/login">Área médica</Link><a className="access-link" href="#demonstracao">Agendar demonstração</a></nav>
+        <nav className="access-nav" aria-label="Acessos"><Link className="access-link access-link-secondary" href="/login">Área médica</Link><Link className="access-link" href="/patient/login">Entrar como paciente</Link></nav>
       </header>
 
       <section id="inicio" className="hero sales-hero">
