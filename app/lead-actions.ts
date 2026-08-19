@@ -28,12 +28,16 @@ export async function submitSalesLead(formData: FormData) {
   }
 
   const admin = createAdminClient();
+  const salesOrganizationSlug = process.env.APOLLOMD_SALES_ORGANIZATION_SLUG || "apollomd-demo";
+  const { data: organization } = await admin.from("organizations").select("id").eq("slug", salesOrganizationSlug).maybeSingle();
+  if (!organization) redirect("/?lead=error#demonstracao");
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count } = await admin.from("sales_leads").select("id", { count: "exact", head: true }).eq("email", email).gte("created_at", since);
+  const { count } = await admin.from("sales_leads").select("id", { count: "exact", head: true }).eq("organization_id", organization.id).eq("email", email).gte("created_at", since);
   if ((count ?? 0) >= 3) redirect("/?lead=success#demonstracao");
 
   const { error } = await admin.from("sales_leads").insert({
     full_name: fullName,
+    organization_id: organization.id,
     email,
     phone: phone || null,
     organization_name: organizationName || null,
