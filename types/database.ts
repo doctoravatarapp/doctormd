@@ -59,12 +59,16 @@ export type Database = {
         { id?: string; organization_id: string; conversation_id: string; sender_type: "patient" | "ai" | "doctor" | "staff" | "system"; sender_user_id?: string | null; content: string; metadata?: Json; client_message_id?: string | null; scheduled_action_id?: string | null; created_at?: string }
       >;
       red_flag_rules: Table<
-        Timestamped & { id: string; organization_id: string; created_by: string | null; name: string; description: string | null; severity: "low" | "medium" | "high" | "critical"; status: "active" | "inactive"; configuration: Json },
+        Timestamped & { id: string; organization_id: string; created_by: string | null; name: string; description: string | null; severity: "low" | "medium" | "high" | "critical"; status: "active" | "inactive"; configuration: Json; category:string|null;signal:string;priority:"home_guidance"|"contact_surgeon"|"immediate_emergency"|null;recommended_action:string|null },
         { id?: string; organization_id: string; created_by?: string | null; name: string; description?: string | null; severity?: "low" | "medium" | "high" | "critical"; status?: "active" | "inactive"; configuration?: Json; created_at?: string; updated_at?: string }
       >;
       red_flag_events: Table<
         Timestamped & { id: string; organization_id: string; rule_id: string | null; conversation_id: string; message_id: string | null; patient_id: string | null; severity: "low" | "medium" | "high" | "critical"; status: "new" | "acknowledged" | "resolved" | "dismissed"; metadata: Json; acknowledged_by: string | null; acknowledged_at: string | null; resolved_by: string | null; resolved_at: string | null },
         { id?: string; organization_id: string; rule_id?: string | null; conversation_id: string; message_id?: string | null; patient_id?: string | null; severity: "low" | "medium" | "high" | "critical"; status?: "new" | "acknowledged" | "resolved" | "dismissed"; metadata?: Json; acknowledged_by?: string | null; acknowledged_at?: string | null; resolved_by?: string | null; resolved_at?: string | null; created_at?: string; updated_at?: string }
+      >;
+      red_flag_confirmations: Table<
+        Timestamped & {id:string;organization_id:string;rule_id:string;conversation_id:string;patient_id:string;source_message_id:string;prompt_message_id:string|null;response_message_id:string|null;status:"pending"|"confirmed"|"rejected"|"superseded";detected_at:string;responded_at:string|null},
+        {id?:string;organization_id:string;rule_id:string;conversation_id:string;patient_id:string;source_message_id:string;prompt_message_id?:string|null;response_message_id?:string|null;status?:"pending"|"confirmed"|"rejected"|"superseded";detected_at?:string;responded_at?:string|null;created_at?:string;updated_at?:string}
       >;
       audit_logs: Table<
         { id: string; organization_id: string | null; actor_user_id: string | null; action: string; entity_type: string; entity_id: string | null; metadata: Json; created_at: string },

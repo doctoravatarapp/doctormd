@@ -4,6 +4,8 @@ import { buildPatientAiContext } from "@/lib/ai/context/builder";
 import { classifyPatientMessage, CLASSIFIER_VERSION } from "@/lib/ai/classifier";
 import { decideAiPolicy } from "@/lib/ai/policy";
 import { CONTEXT_VERSION, PATIENT_ASSISTANT_PRODUCT, PATIENT_ASSISTANT_PROMPT_VERSION, PATIENT_ASSISTANT_SAFETY } from "@/lib/ai/prompts/patient-assistant-v2";
+import { asMatchedRedFlagRule, matchRedFlagRules, parseConfirmationAnswer, patientMessageForRedFlag, redFlagConfirmationPrompt, type MatchedRedFlagRule } from "@/lib/red-flags/detector";
+import { findSemanticallySimilarRedFlag, RED_FLAG_SEMANTIC_MATCHER_VERSION } from "@/lib/red-flags/semantic-matcher";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -36,32 +38,53 @@ export async function POST(request: Request) {
   if (insertError || !patientMessage) return new Response(insertError?.code === "23505" ? "Mensagem já recebida." : "Não foi possível salvar a mensagem.", { status: insertError?.code === "23505" ? 409 : 500 });
   await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversation.id);
 
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+  const { data: pendingConfirmation } = await admin.from("red_flag_confirmations").select("id,rule_id,source_message_id").eq("conversation_id", conversation.id).eq("status", "pending").maybeSingle();
+  if (pendingConfirmation) {
+    const { data: pendingRule } = await admin.from("red_flag_rules").select("id,name,severity,priority,recommended_action,configuration").eq("id", pendingConfirmation.rule_id).eq("organization_id", patient.organization_id).maybeSingle();
+    if (!pendingRule?.priority) return new Response("Não foi possível recuperar o sinal de alerta para confirmação.", { status: 500 });
+    const answer = parseConfirmationAnswer(content);
+    if (!answer) {
+      const retryMessage = "Para confirmar o possível sinal de alerta, responda somente Sim ou Não.";
+      await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: retryMessage, metadata: { reason: "red_flag_confirmation_retry", confirmation_id: pendingConfirmation.id } });
+      return new Response(retryMessage, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-red-flag-confirmation": "pending" } });
+    }
+
+    await admin.from("red_flag_confirmations").update({ status: answer, response_message_id: patientMessage.id, responded_at: new Date().toISOString() }).eq("id", pendingConfirmation.id).eq("status", "pending");
+    if (answer === "rejected") {
+      const rejectedMessage = "Entendido. O sinal de alerta não foi confirmado e nenhuma ação específica foi aplicada. Se algo mudar ou piorar, conte para a equipe.";
+      await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: rejectedMessage, metadata: { reason: "red_flag_rejected", confirmation_id: pendingConfirmation.id } });
+      await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "red_flag.rejected", entity_type: "red_flag_confirmation", entity_id: pendingConfirmation.id, metadata: { conversation_id: conversation.id, rule_id: pendingRule.id } });
+      return new Response(rejectedMessage, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-red-flag-confirmation": "resolved" } });
+    }
+
+    const confirmedRule = { ...pendingRule, configuration: pendingRule.configuration as MatchedRedFlagRule["configuration"], priority: pendingRule.priority } as MatchedRedFlagRule;
+    const automaticallyResolved = confirmedRule.priority === "home_guidance";
+    const { data: event, error: eventError } = await admin.from("red_flag_events").insert({ organization_id: patient.organization_id, rule_id: confirmedRule.id, conversation_id: conversation.id, message_id: pendingConfirmation.source_message_id, patient_id: patient.id, severity: confirmedRule.severity, status: automaticallyResolved ? "resolved" : "new", resolved_at: automaticallyResolved ? new Date().toISOString() : null, metadata: { detector: "confirmed_structured_v3", confirmation_id: pendingConfirmation.id, rule_code: confirmedRule.configuration.code ?? null, category: confirmedRule.configuration.category ?? null, priority: confirmedRule.priority, auto_resolved: automaticallyResolved } }).select("id").single();
+    if (eventError || !event) return new Response("A confirmação foi salva, mas não foi possível registrar a ação.", { status: 500 });
+    const needsHumanReview = confirmedRule.priority !== "home_guidance";
+    if (needsHumanReview) await admin.from("conversations").update({ mode: "waiting_doctor", generation_started_at: null }).eq("id", conversation.id).eq("mode", "ai");
+    const actionMessage = patientMessageForRedFlag(confirmedRule);
+    await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: actionMessage, metadata: { reason: "red_flag_confirmed_action", confirmation_id: pendingConfirmation.id, event_id: event.id, rule_code: confirmedRule.configuration.code ?? null, priority: confirmedRule.priority } });
+    await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "red_flag.confirmed", entity_type: "red_flag_event", entity_id: event.id, metadata: { conversation_id: conversation.id, rule_id: confirmedRule.id, confirmation_id: pendingConfirmation.id } });
+    return new Response(actionMessage, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-red-flag-confirmation": "resolved", "x-apollomd-mode": needsHumanReview ? "waiting_doctor" : conversation.mode } });
+  }
+
   const { data: rules } = await admin.from("red_flag_rules").select("id, name, severity, configuration").eq("organization_id", patient.organization_id).eq("status", "active");
-  const normalizedContent = normalize(content);
-  const matched = (rules ?? []).filter((rule) => {
-    const configuration = rule.configuration as { match_type?: string; pattern?: string };
-    return configuration.match_type === "contains" && configuration.pattern && normalizedContent.includes(normalize(configuration.pattern));
-  });
+  let matched = matchRedFlagRules(content, rules ?? []);
+  if (!matched.length) {
+    const semanticMatch = await findSemanticallySimilarRedFlag(content, rules ?? []);
+    if (semanticMatch.rule) matched = [asMatchedRedFlagRule(semanticMatch.rule)];
+    await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: semanticMatch.fallback ? "red_flag.semantic_match_failed" : "red_flag.semantic_match_completed", entity_type: "message", entity_id: patientMessage.id, metadata: { matcher_version: RED_FLAG_SEMANTIC_MATCHER_VERSION, matched_rule_id: semanticMatch.rule?.id ?? null, confidence: semanticMatch.confidence } });
+  }
   if (matched.length) {
-    for (const rule of matched) {
-      const { data: event, error: eventError } = await admin.from("red_flag_events").insert({ organization_id: patient.organization_id, rule_id: rule.id, conversation_id: conversation.id, message_id: patientMessage.id, patient_id: patient.id, severity: rule.severity, status: "new", metadata: { detector: "deterministic_contains" } }).select("id").single();
-      if (eventError || !event) {
-        console.error("red_flag_event_failed", { conversationId: conversation.id, ruleId: rule.id, code: eventError?.code });
-        return new Response("A mensagem foi salva, mas não foi possível acionar a equipe.", { status: 500 });
-      }
-      if (event) await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "red_flag.created", entity_type: "red_flag_event", entity_id: event.id, metadata: { conversation_id: conversation.id, rule_id: rule.id } });
-    }
-    // A resposta estruturada pode ser registrada, mas a troca para waiting_doctor
-    // acontece antes de qualquer próxima execução da automação.
-    const { data: structured } = await admin.rpc("answer_active_automation_question", { target_conversation_id: conversation.id, target_message_id: patientMessage.id, raw_answer: content });
-    if (structured && typeof structured === "object" && "handled" in structured && structured.handled && "valid" in structured && !structured.valid) {
-      await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "automation.response_invalid", entity_type: "message", entity_id: patientMessage.id, metadata: { conversation_id: conversation.id } });
-    }
-    const safeMessage = "Sua mensagem foi sinalizada para análise da equipe responsável. Aguarde uma orientação pelo atendimento.";
-    await admin.from("conversations").update({ mode: "waiting_doctor", generation_started_at: null }).eq("id", conversation.id).eq("mode", "ai");
-    await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: safeMessage, metadata: { reason: "red_flag_handoff" } });
-    return new Response(safeMessage, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-mode": "waiting_doctor" } });
+    const primaryRule = matched[0];
+    const { data: confirmation, error: confirmationError } = await admin.from("red_flag_confirmations").insert({ organization_id: patient.organization_id, rule_id: primaryRule.id, conversation_id: conversation.id, patient_id: patient.id, source_message_id: patientMessage.id }).select("id").single();
+    if (confirmationError || !confirmation) return new Response("A mensagem foi salva, mas não foi possível iniciar a confirmação do sinal de alerta.", { status: 500 });
+    const confirmationPrompt = redFlagConfirmationPrompt(primaryRule);
+    const { data: promptMessage } = await admin.from("messages").insert({ organization_id: patient.organization_id, conversation_id: conversation.id, sender_type: "system", content: confirmationPrompt, metadata: { reason: "red_flag_confirmation", confirmation_id: confirmation.id, rule_code: primaryRule.configuration.code ?? null } }).select("id").single();
+    if (promptMessage) await admin.from("red_flag_confirmations").update({ prompt_message_id: promptMessage.id }).eq("id", confirmation.id);
+    await admin.from("audit_logs").insert({ organization_id: patient.organization_id, action: "red_flag.confirmation_requested", entity_type: "red_flag_confirmation", entity_id: confirmation.id, metadata: { conversation_id: conversation.id, rule_id: primaryRule.id } });
+    return new Response(confirmationPrompt, { headers: { "content-type": "text/plain; charset=utf-8", "x-apollomd-sender": "system", "x-apollomd-red-flag-confirmation": "pending" } });
   }
 
   if (conversation.mode !== "ai") return new Response(null, { status: 204, headers: { "x-apollomd-mode": conversation.mode } });

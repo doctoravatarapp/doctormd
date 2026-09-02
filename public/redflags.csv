@@ -1,0 +1,23 @@
+Categoria,Sinal de alerta,Nível de prioridade,Ação recomendada
+Ferida operatória,Sangramento ativo que não cessa com compressão local por 10 minutos,Emergência imediata,"Levar ao pronto-socorro imediatamente, mantendo compressão no local"
+Ferida operatória,Abertura dos pontos (deiscência),Contatar o cirurgião,Não tentar fechar; cobrir com gaze limpa e acionar a equipe
+Ferida operatória,Secreção amarelada ou esverdeada com mau cheiro,Contatar o cirurgião,Enviar foto para a equipe e aguardar orientação
+Ferida operatória,Vermelhidão crescente ao redor da ferida,Contatar o cirurgião,Enviar foto e relatar se há dor ou febre associada
+Ferida operatória,Inchaço importante e doloroso no local,Contatar o cirurgião,Avaliar necessidade de retorno ao consultório
+Febre,"Febre de 38,5°C ou mais após as primeiras 48h da cirurgia",Contatar o cirurgião,"Reportar temperatura, horário da medição e sintomas associados"
+Febre,"Febre com calafrios, prostração ou piora do estado geral",Emergência imediata,Levar ao pronto-socorro imediatamente
+Febre,Febre baixa (até 38°C) nas primeiras 48h,Orientação domiciliar,"Observar, hidratar e repetir a medição em 4 a 6 horas"
+Dor,Dor intensa não aliviada pelo analgésico prescrito,Contatar o cirurgião,Não aumentar a dose por conta própria; acionar a equipe
+Dor,"Dor súbita, intensa e crescente, fora do padrão esperado",Emergência imediata,Levar ao pronto-socorro imediatamente
+Dor,Dor leve a moderada controlada com a medicação,Orientação domiciliar,Manter medicação conforme prescrito e repouso
+Náuseas e vômitos,"Vômitos persistentes, não consegue reter líquidos",Emergência imediata,Suspender alimentação oral e levar ao pronto-socorro
+Náuseas e vômitos,Vômito esverdeado (bilioso),Emergência imediata,Levar ao pronto-socorro imediatamente
+Náuseas e vômitos,"Náusea leve isolada, sem vômitos repetidos",Orientação domiciliar,Oferecer líquidos em pequenos volumes e observar
+Hidratação e diurese,Não urina há mais de 8 a 10 horas,Contatar o cirurgião,Aumentar oferta de líquidos e acionar a equipe se persistir
+Hidratação e diurese,Recusa total de líquidos por mais de 8 horas,Contatar o cirurgião,Oferecer pequenos volumes frequentes; acionar equipe se persistir
+Eliminações,Não evacuou nos primeiros 3 a 5 dias,Orientação domiciliar,Esperado em muitos pós-operatórios; manter hidratação e alimentação
+Eliminações,Distensão abdominal importante com dor e vômitos,Emergência imediata,Levar ao pronto-socorro imediatamente
+Eliminações,Sangue nas fezes em quantidade importante,Emergência imediata,Levar ao pronto-socorro imediatamente
+Estado geral,"Letargia, sonolência anormal ou dificuldade de acordar",Emergência imediata,Levar ao pronto-socorro imediatamente
+Estado geral,Irritabilidade intensa e inconsolável,Contatar o cirurgião,Enviar relato à equipe e observar sinais associados
+Medicação,"Sinais de reação alérgica: urticária, inchaço de lábios ou face, dificuldade para respirar",Emergência imediata,Suspender a medicação e levar ao pronto-socorro imediatamente

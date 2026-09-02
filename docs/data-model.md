@@ -10,7 +10,7 @@
 - `patients`: identidade operacional do paciente.
 - `care_episodes`: procedimento/acompanhamento específico do paciente e médico.
 - `conversations` e `messages`: comunicação contextualizada por organização, paciente e episódio.
-- `red_flag_rules` e `red_flag_events`: regra configurada e ocorrência detectada, sem critérios clínicos predefinidos.
+- `red_flag_rules`, `red_flag_confirmations` e `red_flag_events`: catálogo pós-operatório canônico versionado em `public/redflags.csv`, suspeitas que aguardam confirmação explícita do paciente e ocorrências efetivamente confirmadas. Categoria, sinal de alerta, nível de prioridade e ação recomendada são campos próprios; expressões similares permanecem na configuração técnica auditável.
 - `audit_logs`: rastreabilidade administrativa sem conteúdo clínico desnecessário.
 
 ## Multi-tenancy e relações
