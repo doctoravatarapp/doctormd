@@ -6,7 +6,14 @@ declare
   demo_doctor_id uuid;
 begin
   select id into strict demo_org_id from public.organizations where slug = 'apollomd-demo';
-  select id into strict demo_doctor_id from public.doctors where organization_id = demo_org_id and display_name = 'Dr. Teste APolloMD';
+  select id into demo_doctor_id
+  from public.doctors
+  where organization_id = demo_org_id
+    and status = 'active'
+    and display_name !~* '(e2e|teste|sintético)'
+  order by created_at
+  limit 1;
+  if demo_doctor_id is null then raise exception 'No active non-test doctor found in apollomd-demo'; end if;
 
   create temporary table old_patients on commit drop as
     select id
@@ -43,14 +50,18 @@ begin
 
   create temporary table demo_patients (
     id uuid primary key, full_name text not null, preferred_name text not null,
-    email text not null, birth_date date not null
+    email text not null, birth_date date not null, auth_user_id uuid
   ) on commit drop;
-  insert into demo_patients values
-    (gen_random_uuid(), 'Carlos Silva', 'Carlos', 'carlos.silva@demo.apollomd.com.br', date '1982-04-12'),
-    (gen_random_uuid(), 'Ana Medeiros', 'Ana', 'ana.medeiros@demo.apollomd.com.br', date '1990-09-23'),
-    (gen_random_uuid(), 'Rita Souza', 'Rita', 'rita.souza@demo.apollomd.com.br', date '1975-01-30');
-  insert into public.patients (id, organization_id, full_name, preferred_name, email, birth_date, status)
-    select id, demo_org_id, full_name, preferred_name, email, birth_date, 'active' from demo_patients;
+  insert into demo_patients
+  select gen_random_uuid(), fixture.full_name, fixture.preferred_name, fixture.email, fixture.birth_date,
+    (select u.id from auth.users u where lower(u.email) = lower(fixture.email) limit 1)
+  from (values
+    ('Carlos Silva', 'Carlos', 'carlos.silva@demo.apollomd.com.br', date '1982-04-12'),
+    ('Ana Medeiros', 'Ana', 'ana.medeiros@demo.apollomd.com.br', date '1990-09-23'),
+    ('Rita Souza', 'Rita', 'rita.souza@demo.apollomd.com.br', date '1975-01-30')
+  ) fixture(full_name, preferred_name, email, birth_date);
+  insert into public.patients (id, organization_id, full_name, preferred_name, email, birth_date, auth_user_id, status)
+    select id, demo_org_id, full_name, preferred_name, email, birth_date, auth_user_id, 'active' from demo_patients;
 
   create temporary table scenarios (
     scenario text primary key, patient_name text not null, episode_id uuid not null,
