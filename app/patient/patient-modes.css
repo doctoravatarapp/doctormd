@@ -1,4 +1,3 @@
-.chat-message.doctor p { background: #e8f0f7; border-color: #d5e1eb; }
-.chat-message.system { margin-inline: auto; max-width: 95%; text-align: center; }
-.chat-message.system p { background: #eef2ef; border-style: dashed; color: #4e6258; }
-.human-care-note { color: #3b6754; font-size: .66rem; font-weight: 700; margin: 0 auto .5rem; max-width: 48rem; text-align: center; }
+.chat-message.doctor .chat-message-body { background:#f3f6f8;border:1px solid #e0e7eb;border-radius:.85rem;padding:.9rem 1rem; }
+.chat-message.system { text-align:left; }
+.human-care-note { color:#3b6754;font-weight:700; }
