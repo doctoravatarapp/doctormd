@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChatPreview } from "@/components/chat-preview";
+import { RecoveryLinkBridge } from "@/components/auth/recovery-link-bridge";
 import { submitSalesLead } from "./lead-actions";
 
 const benefits = [
@@ -32,6 +33,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
   const { lead } = await searchParams;
   return (
     <main className="page-shell sales-page">
+      <RecoveryLinkBridge />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
 
