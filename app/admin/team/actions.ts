@@ -16,7 +16,8 @@ function value(form: FormData, key: string) {
 function appUrl() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  return configured || (production ? `https://${production}` : "https://apollomd.vercel.app");
+  if (configured?.startsWith("https://") && !configured.includes("localhost")) return configured;
+  return production ? `https://${production}` : "https://www.apollomd.com.br";
 }
 
 type TeamManagerContext = AdminContext & { organization: NonNullable<AdminContext["organization"]> };
