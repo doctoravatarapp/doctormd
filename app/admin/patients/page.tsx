@@ -6,17 +6,19 @@ import { createClient } from "@/lib/supabase/server";
 import { createPatient } from "./actions";
 import { FormDrawer } from "@/components/admin/form-drawer";
 import { PageToolbar, SearchInput } from "@/components/admin/page-toolbar";
+import { ADMIN_PAGE_SIZE, pageNumber, Pagination } from "@/components/admin/pagination";
 
-type PatientsPageProps = { searchParams: Promise<{ q?: string; error?: string; created?: string }> };
+type PatientsPageProps = { searchParams: Promise<{ q?: string; page?: string; error?: string; created?: string }> };
 
 export default async function PatientsPage({ searchParams }: PatientsPageProps) {
   const params = await searchParams;
   const context = await getAdminContext();
   const supabase = await createClient();
-  const query = supabase.from("patients").select("id, full_name, preferred_name, email, phone, status, created_at").order("created_at", { ascending: false });
-  const { data: patients } = context.organization
-    ? await (params.q ? query.eq("organization_id", context.organization.id).ilike("full_name", `%${params.q}%`) : query.eq("organization_id", context.organization.id))
-    : { data: [] };
+  const page = pageNumber(params.page);
+  let query = supabase.from("patients").select("id, full_name, preferred_name, email, phone, status, created_at", { count: "exact" }).order("created_at", { ascending: false });
+  if (context.organization) query = query.eq("organization_id", context.organization.id);
+  if (params.q) query = query.ilike("full_name", `%${params.q}%`);
+  const { data: patients, count } = context.organization ? await query.range((page - 1) * ADMIN_PAGE_SIZE, page * ADMIN_PAGE_SIZE - 1) : { data: [], count: 0 };
 
   return (
     <main className="admin-content">
@@ -30,6 +32,7 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
       <section className="panel table-panel">
         {patients?.length ? <div className="data-table">{patients.map((patient) => <Link href={`/admin/patients/${patient.id}`} className="data-row" key={patient.id}><span className="row-avatar">{patient.full_name.slice(0, 1)}</span><div><strong>{patient.preferred_name || patient.full_name}</strong><small>{patient.email || patient.phone || "Contato não informado"}</small></div><span className="status-badge">{patient.status === "active" ? "Ativo" : "Inativo"}</span><span>→</span></Link>)}</div> : <EmptyState icon="◎" title="Nenhum paciente encontrado" description={params.q ? "Tente outro termo de busca." : "Cadastre o primeiro paciente quando sua operação estiver pronta."} />}
       </section>
+      <Pagination page={page} total={count ?? 0} pathname="/admin/patients" params={{ q: params.q }} />
     </main>
   );
 }

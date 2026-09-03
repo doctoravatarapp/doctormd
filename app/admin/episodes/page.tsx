@@ -3,8 +3,9 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
 import { getAdminContext } from "@/lib/auth/context";
 import { createClient } from "@/lib/supabase/server";
+import { ADMIN_PAGE_SIZE, pageNumber, Pagination } from "@/components/admin/pagination";
 
-type Filters = { search?: string; status?: string };
+type Filters = { search?: string; status?: string; page?: string };
 type EpisodeStatus = "planned" | "preoperative" | "postoperative" | "completed" | "cancelled";
 
 const statusLabels: Record<string, string> = {
@@ -21,15 +22,26 @@ export default async function EpisodesPage({ searchParams }: { searchParams: Pro
   if (!context.organization) return null;
 
   const db = await createClient();
+  const page = pageNumber(filters.page);
+  const search = filters.search?.trim().replace(/[,%_()]/g, " ").slice(0, 80) ?? "";
+  const [{ data: matchingPatients }, { data: matchingDoctors }] = search ? await Promise.all([
+    db.from("patients").select("id").eq("organization_id", context.organization.id).ilike("full_name", `%${search}%`).limit(100),
+    db.from("doctors").select("id").eq("organization_id", context.organization.id).ilike("display_name", `%${search}%`).limit(100),
+  ]) : [{ data: [] }, { data: [] }];
   let episodeQuery = db
     .from("care_episodes")
-    .select("id,patient_id,doctor_id,procedure_name,procedure_date,status,updated_at")
+    .select("id,patient_id,doctor_id,procedure_name,procedure_date,status,updated_at", { count: "exact" })
     .eq("organization_id", context.organization.id)
-    .order("updated_at", { ascending: false })
-    .limit(200);
+    .order("updated_at", { ascending: false });
 
   if (filters.status && filters.status in statusLabels) episodeQuery = episodeQuery.eq("status", filters.status as EpisodeStatus);
-  const { data: episodes } = await episodeQuery;
+  if (search) {
+    const conditions = [`procedure_name.ilike.%${search}%`];
+    if (matchingPatients?.length) conditions.push(`patient_id.in.(${matchingPatients.map(({ id }) => id).join(",")})`);
+    if (matchingDoctors?.length) conditions.push(`doctor_id.in.(${matchingDoctors.map(({ id }) => id).join(",")})`);
+    episodeQuery = episodeQuery.or(conditions.join(","));
+  }
+  const { data: episodes, count } = await episodeQuery.range((page - 1) * ADMIN_PAGE_SIZE, page * ADMIN_PAGE_SIZE - 1);
   const patientIds = [...new Set(episodes?.map((episode) => episode.patient_id) ?? [])];
   const doctorIds = [...new Set(episodes?.map((episode) => episode.doctor_id) ?? [])];
   const [{ data: patients }, { data: doctors }] = await Promise.all([
@@ -43,12 +55,7 @@ export default async function EpisodesPage({ searchParams }: { searchParams: Pro
 
   const patientNames = new Map(patients?.map((patient) => [patient.id, patient.preferred_name || patient.full_name]));
   const doctorNames = new Map(doctors?.map((doctor) => [doctor.id, doctor.display_name]));
-  const search = filters.search?.trim().toLocaleLowerCase("pt-BR") ?? "";
-  const visibleEpisodes = (episodes ?? []).filter((episode) => !search || [
-    episode.procedure_name,
-    patientNames.get(episode.patient_id),
-    doctorNames.get(episode.doctor_id),
-  ].some((value) => value?.toLocaleLowerCase("pt-BR").includes(search)));
+  const visibleEpisodes = episodes ?? [];
 
   return <main className="admin-content episodes-page">
     <PageHeader eyebrow="OPERAÇÃO" title="Acompanhamentos" description="Consulte jornadas em andamento e o histórico de episódios dos pacientes." />
@@ -70,5 +77,6 @@ export default async function EpisodesPage({ searchParams }: { searchParams: Pro
         <span>→</span>
       </Link>)}</div> : <EmptyState icon="◎" title="Nenhum acompanhamento encontrado" description={search || filters.status ? "Ajuste os filtros para ampliar a busca." : "Os acompanhamentos criados para pacientes aparecerão aqui."} />}
     </section>
+    <Pagination page={page} total={count ?? 0} pathname="/admin/episodes" params={{ search: filters.search, status: filters.status }} />
   </main>;
 }
