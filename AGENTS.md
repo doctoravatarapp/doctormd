@@ -13,4 +13,4 @@ Nunca reutilize automaticamente contextos de Supabase, Vercel, GCP ou OpenAI per
 
 Não exponha nem versione secrets. Qualquer mudança estrutural de infraestrutura deve atualizar também `/ativarinfra.md`.
 
-Ao concluir alterações no projeto, sempre crie um commit com escopo claro. Como o ambiente é Cloud Only, execute o build oficial e faça deploy quando a alteração afetar aplicação, banco de dados, configuração ou infraestrutura cloud. Valide o deployment e o health check correspondente. Nunca inclua no commit arquivos não relacionados ou secrets.
+Ao concluir alterações no projeto, sempre crie um commit com escopo claro e sincronize a branch atual com o remoto oficial. Como o ambiente é Cloud Only, execute o build oficial e faça deploy quando a alteração afetar aplicação, banco de dados, configuração ou infraestrutura cloud. Valide o deployment e o health check correspondente. Nunca inclua no commit arquivos não relacionados ou secrets.
