@@ -34,7 +34,7 @@ const cookieHeader = [...cookieJar.entries()].map(([name, value]) => `${name}=${
 const adminResponse = await fetch(`${appUrl}/admin`, { headers: { cookie: cookieHeader }, redirect: "manual" });
 if (adminResponse.status !== 200) throw new Error(`Authenticated /admin returned ${adminResponse.status}.`);
 const adminHtml = await adminResponse.text();
-if (!adminHtml.includes("APolloMD Demo")) throw new Error("Authenticated organization was not rendered.");
+if (!adminHtml.includes("ApolloMD Demo")) throw new Error("Authenticated organization was not rendered.");
 
 const { error: signOutError } = await persistedClient.auth.signOut();
 if (signOutError) throw signOutError;
@@ -42,4 +42,4 @@ const signedOutCookie = [...cookieJar.entries()].map(([name, value]) => `${name}
 const signedOutResponse = await fetch(`${appUrl}/admin`, { headers: { cookie: signedOutCookie }, redirect: "manual" });
 if (![302, 303, 307, 308].includes(signedOutResponse.status)) throw new Error("Signed-out /admin was not redirected.");
 
-console.log(JSON.stringify({ login: "ok", session: "persisted", organization: "APolloMD Demo", adminRoute: 200, logout: "ok" }));
+console.log(JSON.stringify({ login: "ok", session: "persisted", organization: "ApolloMD Demo", adminRoute: 200, logout: "ok" }));

@@ -1,6 +1,6 @@
 # Arquitetura inicial
 
-APolloMD começa como aplicação full-stack Next.js hospedada na Vercel, com Supabase para PostgreSQL/Auth/RLS e OpenAI acessada somente por rotas server-side. GCP permanece reservado para workloads que tenham necessidade concreta.
+ApolloMD começa como aplicação full-stack Next.js hospedada na Vercel, com Supabase para PostgreSQL/Auth/RLS e OpenAI acessada somente por rotas server-side. GCP permanece reservado para workloads que tenham necessidade concreta.
 
 ## Ambientes cloud
 

@@ -22,7 +22,7 @@ export default async function LeadsPage({searchParams}:{searchParams:Promise<{q?
   if(status)query=query.eq("status",status as keyof typeof statusLabels);
   const [{data:leads,count},{data:allStatuses}]=await Promise.all([query.range((page-1)*ADMIN_PAGE_SIZE,page*ADMIN_PAGE_SIZE-1),admin.from("sales_leads").select("status").eq("organization_id",organizationId)]);
   const counts=Object.keys(statusLabels).reduce<Record<string,number>>((map,key)=>{map[key]=allStatuses?.filter(row=>row.status===key).length??0;return map},{});
-  return <main className="admin-content leads-page"><PageHeader eyebrow="COMERCIAL" title="Leads" description="Acompanhe os profissionais interessados no APolloMD e avance cada oportunidade."/>
+  return <main className="admin-content leads-page"><PageHeader eyebrow="COMERCIAL" title="Leads" description="Acompanhe os profissionais interessados no ApolloMD e avance cada oportunidade."/>
     <section className="lead-metrics" aria-label="Resumo do funil"><div><small>Novos</small><strong>{counts.new}</strong></div><div><small>Contatados</small><strong>{counts.contacted}</strong></div><div><small>Qualificados</small><strong>{counts.qualified}</strong></div><div><small>Ganhos</small><strong>{counts.won}</strong></div></section>
     <PageToolbar><form className="lead-filters"><SearchInput defaultValue={params.q} placeholder="Buscar nome, e-mail ou clínica"/><select name="status" defaultValue={status} aria-label="Filtrar por status"><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select><button>Filtrar</button></form></PageToolbar>
     {params.updated?<p className="success-message">Status do lead atualizado.</p>:null}

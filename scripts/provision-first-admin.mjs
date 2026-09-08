@@ -29,7 +29,7 @@ if (organizationError) throw organizationError;
 if (!organization) {
   const created = await supabase
     .from("organizations")
-    .insert({ name: "APolloMD Demo", slug: "apollomd-demo", status: "active" })
+    .insert({ name: "ApolloMD Demo", slug: "apollomd-demo", status: "active" })
     .select("id, name, slug")
     .single();
   if (created.error) throw created.error;
@@ -38,7 +38,7 @@ if (!organization) {
 
 const { error: profileError } = await supabase
   .from("profiles")
-  .upsert({ id: user.id, full_name: user.user_metadata?.full_name ?? "Administrador APolloMD", status: "active" });
+  .upsert({ id: user.id, full_name: user.user_metadata?.full_name ?? "Administrador ApolloMD", status: "active" });
 if (profileError) throw profileError;
 
 const { error: membershipError } = await supabase

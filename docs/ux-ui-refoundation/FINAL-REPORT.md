@@ -1,4 +1,4 @@
-# APolloMD — Relatório final UX/UI Refoundation
+# ApolloMD — Relatório final UX/UI Refoundation
 
 Data: 2026-08-11 (America/Sao_Paulo)  
 Baseline auditada: `b37e1c9`  

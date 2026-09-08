@@ -22,7 +22,7 @@ begin
       and (
         email like '%@invalid.local'
         or email like '%@demo.apollomd.com.br'
-        or full_name in ('E2E Patient B APolloMD', 'Paciente Teste APolloMD')
+        or full_name in ('E2E Patient B ApolloMD', 'Paciente Teste ApolloMD')
       );
   create temporary table old_episodes on commit drop as
     select id from public.care_episodes where organization_id = demo_org_id and patient_id in (select id from old_patients);

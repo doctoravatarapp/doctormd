@@ -5,7 +5,7 @@ export function ChatPreview() {
         <div className="chat-doctor">
           <div className="doctor-avatar">AM</div>
           <div>
-            <strong>Assistente APolloMD</strong>
+            <strong>Assistente ApolloMD</strong>
             <span>Conectado ao seu médico</span>
           </div>
         </div>
@@ -16,7 +16,7 @@ export function ChatPreview() {
         <div className="message message-assistant">
           Olá! Este é o novo canal de acompanhamento da sua equipe médica. Como você está se
           sentindo hoje?
-          <small>APolloMD · agora</small>
+          <small>ApolloMD · agora</small>
         </div>
 
         <div className="message message-patient">
@@ -27,7 +27,7 @@ export function ChatPreview() {
         <div className="message message-assistant">
           Ótimo saber disso. Em breve, sua equipe poderá acompanhar cada etapa por aqui, sempre com
           supervisão humana.
-          <small>APolloMD · agora</small>
+          <small>ApolloMD · agora</small>
         </div>
 
         <div className="chat-spacer" />

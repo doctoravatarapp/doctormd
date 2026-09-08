@@ -23,7 +23,7 @@ export default async function AutomationsPage({ searchParams }: { searchParams: 
   const itemCount = (items: { flow_id: string }[] | null, id: string) => items?.filter((item) => item.flow_id === id).length ?? 0;
 
   return <main className="admin-content">
-    <PageHeader eyebrow="GESTÃO" title="Automações" description="Configure fluxos de acompanhamento enviados pelo APolloMD." />
+    <PageHeader eyebrow="GESTÃO" title="Automações" description="Configure fluxos de acompanhamento enviados pelo ApolloMD." />
     <section className="page-feedback">{params.saved ? <p className="success-message">Automação salva.</p> : null}{params.error ? <p className="form-error">Não foi possível concluir.</p> : null}</section>
     <section className="panel table-panel">{flows?.length ? <div className="data-table">{flows.map((flow) => <Link className="data-row" href={`/admin/automations/${flow.id}`} key={flow.id}><span className="row-avatar">◇</span><div><strong>{flow.name}</strong><small>{itemCount(steps, flow.id)} etapas · v{flow.version} · {itemCount(assignments, flow.id)} acompanhamentos</small></div><span className="status-badge">{flow.status}</span><span>→</span></Link>)}</div> : <EmptyState icon="◇" title="Nenhum fluxo" description="Crie o primeiro fluxo para automatizar acompanhamentos." />}</section>
     <Pagination page={page} total={total ?? 0} pathname="/admin/automations" />

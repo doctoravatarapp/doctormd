@@ -1,4 +1,4 @@
-# APolloMD
+# ApolloMD
 
 SaaS web AI First para atendimento e acompanhamento conversacional de pacientes de cirurgiões.
 
@@ -6,7 +6,7 @@ SaaS web AI First para atendimento e acompanhamento conversacional de pacientes 
 
 Bootstrap cloud com Next.js, React, TypeScript, Tailwind CSS e endpoint `GET /api/health`. Funcionalidades clínicas ainda não estão implementadas.
 
-APolloMD é **Cloud Only**. Leia [ativarinfra.md](./ativarinfra.md) antes de qualquer operação de infraestrutura, banco ou deploy.
+ApolloMD é **Cloud Only**. Leia [ativarinfra.md](./ativarinfra.md) antes de qualquer operação de infraestrutura, banco ou deploy.
 
 ## Validação de build
 

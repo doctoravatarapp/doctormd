@@ -66,7 +66,7 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
   return <main className="admin-content">
     <PageHeader eyebrow="ACOMPANHAMENTO" title={episode.procedure_name} description={`${patient?.preferred_name || patient?.full_name || "Paciente"} · ${episode.status}`} />
     {query.assigned ? <p className="success-message">Automação associada e agendada.</p> : null}
-    {query.summary === "updated" ? <p className="success-message">Resumo APolloMD atualizado.</p> : null}
+    {query.summary === "updated" ? <p className="success-message">Resumo ApolloMD atualizado.</p> : null}
     {query.summary === "busy" ? <p className="form-error">Já existe uma geração em andamento. Atualize a página em instantes.</p> : null}
     {query.summary === "error" ? <p className="form-error">Não foi possível atualizar o resumo. A versão anterior foi preservada e você pode tentar novamente.</p> : null}
 
@@ -77,7 +77,7 @@ export default async function EpisodePage({ params, searchParams }: { params: Pr
 
     <section className={`panel operation-item priority-${operational.priority}`}><p className="eyebrow">SITUAÇÃO OPERACIONAL — NÃO CLÍNICA</p><h2>Prioridade: {PRIORITY_LABELS[operational.priority]}</h2><ul>{operational.reasons.map((reason) => <li key={reason}>{REASON_LABELS[reason]}</li>)}</ul><p>Desde: {format(operational.since)}</p></section>
 
-    <section className="panel episode-summary"><div className="section-heading"><div><p className="eyebrow">GERADO POR IA</p><h2>Resumo APolloMD</h2></div>{stale ? <span className="status-pill warning">Atualização disponível</span> : latestSummary ? <span className="status-pill">Atualizado</span> : null}</div>
+    <section className="panel episode-summary"><div className="section-heading"><div><p className="eyebrow">GERADO POR IA</p><h2>Resumo ApolloMD</h2></div>{stale ? <span className="status-pill warning">Atualização disponível</span> : latestSummary ? <span className="status-pill">Atualizado</span> : null}</div>
       {!summary ? <p>Nenhum resumo gerado ainda.</p> : <><SummaryBlock title="Visão geral" text={summary.overview} /><SummaryList title="Relatos do paciente" items={summary.key_patient_reports} /><SummaryList title="Respostas coletadas" items={summary.structured_answers} /><SummaryList title="Alertas" items={summary.alerts_summary} /><SummaryList title="Intervenções" items={summary.human_interventions} /><SummaryBlock title="Estado atual descrito pela IA" text={summary.current_state} /><small>Versão {latestSummary?.summary_version} · {latestSummary?.model} · {latestSummary?.prompt_version} · {format(latestSummary?.generated_at ?? null)}</small></>}
       <form action={generateEpisodeSummary}><input type="hidden" name="episode_id" value={id} /><button disabled={generating}>{generating ? "Gerando…" : latestSummary ? "Atualizar resumo" : "Gerar resumo"}</button></form>
       <p className="muted-copy">Representação operacional derivada. Consulte sempre as fontes originais abaixo.</p>

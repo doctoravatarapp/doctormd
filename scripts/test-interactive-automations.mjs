@@ -11,7 +11,7 @@ async function fixture(answer,{invalid=false,human=false}={}){
  const patient=ok(await db.from("patients").select("id").eq("email","doctoravatar.app@gmail.com").limit(1).single(),"test patient");
  const episode=ok(await db.from("care_episodes").select("*").eq("patient_id",patient.id).order("created_at",{ascending:false}).limit(1).single(),"test episode");
  const conv=ok(await db.from("conversations").select("*").eq("care_episode_id",episode.id).eq("status","open").limit(1).single(),"conversation");
- const flow=await one("automation_flows",db.from("automation_flows").insert({organization_id:episode.organization_id,name:`Fluxo Teste Interativo APolloMD ${crypto.randomUUID().slice(0,6)}`,status:"draft"}),"flow"); made.push(flow.id);
+ const flow=await one("automation_flows",db.from("automation_flows").insert({organization_id:episode.organization_id,name:`Fluxo Teste Interativo ApolloMD ${crypto.randomUUID().slice(0,6)}`,status:"draft"}),"flow"); made.push(flow.id);
  const base={organization_id:episode.organization_id,flow_id:flow.id,anchor:"previous_step_completed_at",delay_value:0,delay_unit:"minutes",is_active:true};
  const msg=await one("automation_steps",db.from("automation_steps").insert({...base,position:1,name:"Início",step_type:"message",message_content:"Vamos iniciar um teste."}),"step1");
  const q=await one("automation_steps",db.from("automation_steps").insert({...base,position:2,name:"Nota",step_type:"question",message_content:"Qual nota você dá para este teste?",response_type:"number",response_min:0,response_max:10}),"step2");
@@ -37,6 +37,6 @@ async function fixture(answer,{invalid=false,human=false}={}){
 
 async function cleanup(){for(const id of madeAssignments.reverse())await db.from("episode_automations").delete().eq("id",id);for(const id of made.reverse())await db.from("automation_flows").delete().eq("id",id);if(madeMessages.length)await db.from("messages").delete().in("id",madeMessages);}
 try{
- const {data:stale}=await db.from("automation_flows").select("id").like("name","Fluxo Teste Interativo APolloMD%");if(stale?.length){const ids=stale.map(x=>x.id);await db.from("episode_automations").delete().in("flow_id",ids);await db.from("automation_flows").delete().in("id",ids);}
+ const {data:stale}=await db.from("automation_flows").select("id").like("name","Fluxo Teste Interativo ApolloMD%");if(stale?.length){const ids=stale.map(x=>x.id);await db.from("episode_automations").delete().in("flow_id",ids);await db.from("automation_flows").delete().in("id",ids);}
  await fixture("9");await fixture("4");await fixture("abc",{invalid:true});await fixture("9",{human:true});console.log("interactive automation E2E: OK");
 }finally{await cleanup();}

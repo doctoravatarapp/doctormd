@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="auth-page">
       <Link className="brand auth-brand" href="/">
         <span className="brand-mark">A</span>
-        <span>APolloMD</span>
+        <span>ApolloMD</span>
       </Link>
       <Breadcrumbs className="auth-breadcrumbs" />
       <section className="auth-card">
@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Senha
             <input name="password" type="password" autoComplete="current-password" required />
           </label>
-          <button type="submit">Entrar no APolloMD</button>
+          <button type="submit">Entrar no ApolloMD</button>
         </form>
         <small>Acesso restrito a profissionais autorizados.</small>
       </section>

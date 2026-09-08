@@ -13,7 +13,7 @@ export async function buildPatientAiContext(db:Admin,input:{organizationId:strin
   db.from("messages").select("sender_type,content").eq("conversation_id",input.conversationId).in("sender_type",["patient","ai"]).order("created_at",{ascending:false}).limit(AI_CONFIG.historyMessages)
  ]);
  const stepIds=responses?.map(r=>r.automation_step_id)??[],{data:steps}=stepIds.length?await db.from("automation_steps").select("id,message_content").in("id",stepIds):{data:[]};const prompts=new Map(steps?.map(s=>[s.id,s.message_content]));
- const assistant:AssistantSettings=settings?.is_active?{displayName:settings.display_name,style:settings.communication_style,customInstructions:settings.custom_instructions||"",version:settings.version}:{displayName:"APolloMD",style:"balanced",customInstructions:"",version:1};
+ const assistant:AssistantSettings=settings?.is_active?{displayName:settings.display_name,style:settings.communication_style,customInstructions:settings.custom_instructions||"",version:settings.version}:{displayName:"ApolloMD",style:"balanced",customInstructions:"",version:1};
  const structured=(responses??[]).reverse().map(r=>({question:prompts.get(r.automation_step_id)||"Pergunta do acompanhamento",answer:r.skipped?"Prefiro não responder":r.selected_option??r.text_value??r.number_value??r.boolean_value}));
  return{version:CONTEXT_VERSION,assistant,summary:{patient:input.patientName,doctor:input.doctorName,specialty:input.specialty,procedure:input.procedureName,episodeStatus:input.episodeStatus,conversationMode:input.conversationMode,automationStatus:automation?.status||"none",timezone:org?.timezone||"UTC"},structuredResponses:structured,history:(history??[]).reverse()};
 }

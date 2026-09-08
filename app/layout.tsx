@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "APolloMD | Cuidado que continua",
+  title: "ApolloMD | Cuidado que continua",
   description: "Uma experiência conversacional segura para aproximar médicos e pacientes.",
 };
 

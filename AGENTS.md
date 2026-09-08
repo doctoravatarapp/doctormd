@@ -1,8 +1,8 @@
-# APolloMD — instruções permanentes
+# ApolloMD — instruções permanentes
 
 Antes de qualquer trabalho relacionado a infraestrutura, deploy, banco de dados ou serviços externos, leia primeiro `/ativarinfra.md`.
 
-O APolloMD utiliza exclusivamente infraestrutura cloud. Não introduza dependências de `localhost`, banco local, Docker Desktop, Supabase local, emuladores locais ou outra infraestrutura executada no computador do desenvolvedor.
+O ApolloMD utiliza exclusivamente infraestrutura cloud. Não introduza dependências de `localhost`, banco local, Docker Desktop, Supabase local, emuladores locais ou outra infraestrutura executada no computador do desenvolvedor.
 
 Nunca reutilize automaticamente contextos de Supabase, Vercel, GCP ou OpenAI pertencentes a outro projeto. Antes de qualquer ação externa, valide estes identificadores:
 
