@@ -15,6 +15,10 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
   const context = await getAdminContext();
   const supabase = await createClient();
   const page = pageNumber(params.page);
+  let doctorsQuery = supabase.from("doctors").select("id,display_name,specialty").eq("status", "active").order("display_name");
+  if (context.organization) doctorsQuery = doctorsQuery.eq("organization_id", context.organization.id);
+  if (context.role === "doctor") doctorsQuery = doctorsQuery.eq("user_id", context.user.id);
+  const { data: doctors } = context.organization ? await doctorsQuery : { data: [] };
   let query = supabase.from("patients").select("id, full_name, preferred_name, email, phone, status, created_at", { count: "exact" }).order("created_at", { ascending: false });
   if (context.organization) query = query.eq("organization_id", context.organization.id);
   if (params.q) query = query.ilike("full_name", `%${params.q}%`);
@@ -28,7 +32,7 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
         {params.created ? <p className="success-message">Paciente cadastrado com sucesso.</p> : null}
         {params.error ? <p className="form-error">Não foi possível concluir. Revise os dados e tente novamente.</p> : null}
       </section>
-      <FormDrawer label="Novo paciente" title="Novo paciente" description="Cadastre os dados essenciais para iniciar um acompanhamento."><form action={createPatient} className="drawer-form"><label>Nome completo<input name="full_name" required /></label><label>Nome preferido<input name="preferred_name" /></label><label>E-mail<input name="email" type="email" /></label><label>Telefone<input name="phone" /></label><label>Data de nascimento<input name="birth_date" type="date" /></label><button type="submit">Cadastrar paciente</button></form></FormDrawer>
+      {doctors?.length ? <FormDrawer label="Novo paciente" title="Novo paciente" description="Cadastre o paciente e defina quem será o médico responsável."><form action={createPatient} className="drawer-form"><label>Nome completo<input name="full_name" required /></label><label>Nome preferido<input name="preferred_name" /></label><label>Médico responsável<select name="responsible_doctor_id" required defaultValue={doctors.length === 1 ? doctors[0].id : ""}><option value="" disabled>Selecione um médico</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.display_name}{doctor.specialty ? ` · ${doctor.specialty}` : ""}</option>)}</select></label><label>E-mail<input name="email" type="email" /></label><label>Telefone<input name="phone" /></label><label>Data de nascimento<input name="birth_date" type="date" /></label><button type="submit">Cadastrar paciente</button></form></FormDrawer> : null}
       <section className="panel table-panel">
         {patients?.length ? <div className="data-table">{patients.map((patient) => <Link href={`/admin/patients/${patient.id}`} className="data-row" key={patient.id}><span className="row-avatar">{patient.full_name.slice(0, 1)}</span><div><strong>{patient.preferred_name || patient.full_name}</strong><small>{patient.email || patient.phone || "Contato não informado"}</small></div><span className="status-badge">{patient.status === "active" ? "Ativo" : "Inativo"}</span><span>→</span></Link>)}</div> : <EmptyState icon="◎" title="Nenhum paciente encontrado" description={params.q ? "Tente outro termo de busca." : "Cadastre o primeiro paciente quando sua operação estiver pronta."} />}
       </section>

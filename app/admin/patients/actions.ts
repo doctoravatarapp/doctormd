@@ -16,11 +16,13 @@ export async function createPatient(formData: FormData) {
   if (!context.organization || !can(context.role, "patients:create")) redirect("/admin/patients?error=access");
 
   const fullName = String(formData.get("full_name") ?? "").trim();
-  if (fullName.length < 2) redirect("/admin/patients?error=validation");
+  const responsibleDoctorId = String(formData.get("responsible_doctor_id") ?? "").trim();
+  if (fullName.length < 2 || !responsibleDoctorId) redirect("/admin/patients?error=validation");
 
   const supabase = await createClient();
   const { error } = await supabase.from("patients").insert({
     organization_id: context.organization.id,
+    responsible_doctor_id: responsibleDoctorId,
     full_name: fullName,
     preferred_name: optional(formData.get("preferred_name")),
     email: optional(formData.get("email")),
@@ -31,6 +33,24 @@ export async function createPatient(formData: FormData) {
   if (error) redirect("/admin/patients?error=save");
   revalidatePath("/admin/patients");
   redirect("/admin/patients?created=1");
+}
+
+export async function assignPatientDoctor(formData: FormData) {
+  const context = await getAdminContext();
+  const patientId = String(formData.get("patient_id") ?? "").trim();
+  const doctorId = String(formData.get("responsible_doctor_id") ?? "").trim();
+  const target = `/admin/patients/${patientId}`;
+  if (!context.organization || !["platform_admin", "organization_admin", "staff"].includes(context.role)) redirect(`${target}?error=access`);
+  if (!patientId || !doctorId) redirect(`${target}?error=validation`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_patient_doctor", { target_patient_id: patientId, target_doctor_id: doctorId });
+  if (error) redirect(`${target}?error=doctor`);
+  revalidatePath("/admin");
+  revalidatePath("/admin/patients");
+  revalidatePath(target);
+  revalidatePath("/admin/episodes");
+  revalidatePath("/admin/conversations");
+  redirect(`${target}?saved=doctor`);
 }
 
 export async function updatePatient(formData: FormData) {
