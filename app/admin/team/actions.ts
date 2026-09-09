@@ -7,6 +7,7 @@ import { getAdminContext, type AdminContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const roles = ["organization_admin", "doctor", "staff"] as const;
+const inviteRoles = ["organization_admin", "staff"] as const;
 const statuses = ["active", "inactive"] as const;
 
 function value(form: FormData, key: string) {
@@ -44,7 +45,7 @@ export async function inviteTeamMember(form: FormData) {
   const email = value(form, "email").toLowerCase();
   const fullName = value(form, "full_name");
   const role = value(form, "role") as typeof roles[number];
-  if (!/^\S+@\S+\.\S+$/.test(email) || fullName.length < 2 || !roles.includes(role)) redirect("/admin/team?error=validation");
+  if (!/^\S+@\S+\.\S+$/.test(email) || fullName.length < 2 || !inviteRoles.includes(role as typeof inviteRoles[number])) redirect("/admin/team?error=validation");
 
   const admin = createAdminClient();
   let user = await findAuthUserByEmail(email);
@@ -99,6 +100,7 @@ export async function updateTeamMember(form: FormData) {
   const admin = createAdminClient();
   const { data: member } = await admin.from("organization_memberships").select("id,user_id,role,status").eq("id", membershipId).eq("organization_id", context.organization.id).maybeSingle();
   if (!member) redirect("/admin/team?error=not_found");
+  if (role === "doctor" && member.role !== "doctor") redirect(`${target}?error=validation`);
   if (member.user_id === context.user.id && (role !== member.role || status !== member.status)) redirect(`${target}?error=self`);
 
   if (member.role === "organization_admin" && member.status === "active" && (role !== "organization_admin" || status !== "active")) {

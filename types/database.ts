@@ -39,8 +39,8 @@ export type Database = {
         { id?: string; organization_id: string; user_id: string; role: Exclude<AppRole, "platform_admin">; status?: MemberStatus; created_at?: string; updated_at?: string }
       >;
       doctors: Table<
-        Timestamped & { id: string; organization_id: string; user_id: string | null; display_name: string; specialty: string | null; professional_registration: string | null; status: "active" | "inactive" },
-        { id?: string; organization_id: string; user_id?: string | null; display_name: string; specialty?: string | null; professional_registration?: string | null; status?: "active" | "inactive"; created_at?: string; updated_at?: string }
+        Timestamped & { id: string; organization_id: string; user_id: string | null; email: string | null; display_name: string; specialty: string | null; professional_registration: string | null; status: "active" | "inactive" },
+        { id?: string; organization_id: string; user_id?: string | null; email?: string | null; display_name: string; specialty?: string | null; professional_registration?: string | null; status?: "active" | "inactive"; created_at?: string; updated_at?: string }
       >;
       patients: Table<
         Timestamped & { id: string; organization_id: string; auth_user_id: string | null; full_name: string; preferred_name: string | null; email: string | null; phone: string | null; birth_date: string | null; status: "active" | "inactive" },
