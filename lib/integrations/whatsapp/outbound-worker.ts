@@ -23,18 +23,18 @@ export async function processWhatsAppOutboundBatch() {
       const { data: links, error: linkError } = await admin.from("whatsapp_patient_links" as "messages")
         .select("id")
         .eq("organization_id", item.organization_id)
-        .eq("patient_id", item.patient_id)
-        .eq("provider_phone_number_id", item.provider_phone_number_id)
-        .eq("sender_wa_id", item.recipient_wa_id)
-        .is("revoked_at", null)
+        .eq("patient_id" as "id", item.patient_id)
+        .eq("provider_phone_number_id" as "id", item.provider_phone_number_id)
+        .eq("sender_wa_id" as "id", item.recipient_wa_id)
+        .is("revoked_at" as "created_at", null)
         .limit(1);
       if (linkError || !links?.length) throw new Error("link_revoked");
       // Plain text replies are allowed only inside the 24-hour customer service window.
       const { data: inbound, error: inboundError } = await admin.from("whatsapp_inbound_events" as "messages")
         .select("received_at")
-        .eq("sender_wa_id", item.recipient_wa_id)
-        .eq("provider_phone_number_id", item.provider_phone_number_id)
-        .gte("received_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .eq("sender_wa_id" as "id", item.recipient_wa_id)
+        .eq("provider_phone_number_id" as "id", item.provider_phone_number_id)
+        .gte("received_at" as "created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .limit(1);
       if (inboundError || !inbound?.length) throw new Error("outside_customer_service_window");
       const { data: message, error: messageError } = await admin.from("messages")
