@@ -1,12 +1,10 @@
-import { extractWhatsAppMessages, verifyWhatsAppSignature } from "@/lib/integrations/whatsapp/webhook";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyWhatsAppSignature } from "@/lib/integrations/whatsapp/webhook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Deliberately disabled until durable inbox, patient verification and shared
-// clinical orchestration are implemented. Never acknowledge live events without
-// durable storage: Meta retries are essential for reliable message delivery.
-function enabled(): boolean {
+function enabled() {
   return process.env.WHATSAPP_ENABLED === "true";
 }
 
@@ -24,20 +22,53 @@ export async function GET(request: Request) {
   return new Response(challenge, { status: 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
 }
 
+type Change = { field?: unknown; value?: { metadata?: { phone_number_id?: unknown }; messages?: unknown[] } };
+type Entry = { changes?: Change[] };
+
 export async function POST(request: Request) {
   if (!enabled()) return new Response("Not found", { status: 404 });
   const secret = process.env.META_WHATSAPP_APP_SECRET;
-  if (!secret) return new Response("Not configured", { status: 503 });
+  const expectedPhoneId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  if (!secret || !expectedPhoneId) return new Response("Not configured", { status: 503 });
   const rawBody = await request.text();
-  if (rawBody.length > 1024 * 1024) return new Response("Payload too large", { status: 413 });
-  if (!verifyWhatsAppSignature(rawBody, request.headers.get("x-hub-signature-256"), secret)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  let payload: unknown;
+  if (Buffer.byteLength(rawBody, "utf8") > 1024 * 1024) return new Response("Payload too large", { status: 413 });
+  if (!verifyWhatsAppSignature(rawBody, request.headers.get("x-hub-signature-256"), secret)) return new Response("Unauthorized", { status: 401 });
+
+  let payload: { object?: unknown; entry?: Entry[] };
   try { payload = JSON.parse(rawBody); } catch { return new Response("Bad request", { status: 400 }); }
-  // Parser ready for next phase. Never log sender identifiers or content.
-  extractWhatsAppMessages(payload);
-  // Intentionally return a retryable error rather than silently discarding
-  // signed events until durable persistence and tenant routing are implemented.
-  return new Response("Webhook processing not yet enabled", { status: 503, headers: { "retry-after": "60" } });
+  if (payload?.object !== "whatsapp_business_account" || !Array.isArray(payload.entry)) return new Response("Bad request", { status: 400 });
+
+  const records: Array<{ provider_message_id: string; provider_phone_number_id: string; sender_wa_id: string; event_type: string; payload: unknown }> = [];
+  for (const entry of payload.entry) {
+    if (!Array.isArray(entry?.changes)) continue;
+    for (const change of entry.changes) {
+      if (change?.field !== "messages" || !change.value) continue;
+      const phoneId = change.value.metadata?.phone_number_id;
+      if (phoneId !== expectedPhoneId) continue;
+      if (!Array.isArray(change.value.messages)) continue;
+      for (const item of change.value.messages) {
+        if (!item || typeof item !== "object") continue;
+        const msg = item as { id?: unknown; from?: unknown; type?: unknown };
+        if (typeof msg.id !== "string" || typeof msg.from !== "string" || typeof msg.type !== "string") continue;
+        if (msg.id.length > 512 || msg.from.length > 64 || msg.type.length > 64) continue;
+        records.push({ provider_message_id: msg.id, provider_phone_number_id: phoneId, sender_wa_id: msg.from, event_type: msg.type, payload: item });
+      }
+    }
+  }
+
+  if (records.length) {
+    try {
+      const admin = createAdminClient();
+      // Explicitly typed transport table pending regeneration of generated DB types.
+      const { error } = await admin.from("whatsapp_inbound_events" as "messages").upsert(
+        records as never,
+        { onConflict: "provider_message_id", ignoreDuplicates: true }
+      );
+      if (error) return new Response("Storage unavailable", { status: 503 });
+    } catch {
+      return new Response("Storage unavailable", { status: 503 });
+    }
+  }
+  // Delivery receipts contain no incoming patient message and need no inbox row.
+  return new Response("EVENT_RECEIVED", { status: 200, headers: { "cache-control": "no-store" } });
 }
