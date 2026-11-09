@@ -15,7 +15,7 @@ export async function processWhatsAppOutboundBatch() {
   const { data: unclassified } = await admin.from("whatsapp_outbound_events" as "messages")
     .select("id").eq("status" as "sender_type", "failed" as never)
     .eq("error_code" as "sender_type", "send_unconfirmed" as never).limit(1);
-  if (unclassified?.length) {
+  if (Array.isArray(unclassified) && unclassified.length > 0) {
     const token = process.env.META_WHATSAPP_ACCESS_TOKEN;
     const phoneId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
     if (token && phoneId) {
