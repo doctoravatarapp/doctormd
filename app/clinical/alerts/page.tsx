@@ -55,7 +55,7 @@ export default function ClinicalAlertsPage() {
       if (!response.ok) throw new Error(payload.error ?? "Operação recusada.");
       if (action === "reply") setDrafts(previous => ({ ...previous, [alert.id]: "" }));
       setFeedback(previous => ({ ...previous, [alert.id]:
-        action === "reply" ? (payload.delivery === "queued_not_delivered" ? "Resposta registrada e enfileirada; entrega ainda não confirmada." : "Resposta registrada; envio ao WhatsApp não confirmado.")
+        action === "reply" ? (payload.delivery === "queued_not_delivered" ? "Resposta registrada e enfileirada; entrega ainda não confirmada." : "Resposta registrada, mas não enfileirada; verifique vínculo e janela do WhatsApp.")
           : action === "takeover" ? "Conversa assumida pelo médico." : "Conversa devolvida à IA." }));
       await reload();
     } catch (cause) {
