@@ -4,6 +4,11 @@ import { verifyWhatsAppSignature } from "@/lib/integrations/whatsapp/webhook";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Diagnostics contain only outcome codes and counts, never identifiers or message bodies.
+function audit(outcome: string, count?: number) {
+  console.info("[whatsapp-webhook]", JSON.stringify({ outcome, ...(count === undefined ? {} : { count }) }));
+}
+
 function enabled() {
   return process.env.WHATSAPP_ENABLED === "true";
 }
@@ -26,17 +31,19 @@ type Change = { field?: unknown; value?: { metadata?: { phone_number_id?: unknow
 type Entry = { changes?: Change[] };
 
 export async function POST(request: Request) {
-  if (!enabled()) return new Response("Not found", { status: 404 });
+  if (!enabled()) { audit("disabled"); return new Response("Not found", { status: 404 }); }
+  audit("post_received");
   const secret = process.env.META_WHATSAPP_APP_SECRET;
   const expectedPhoneId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
-  if (!secret || !expectedPhoneId) return new Response("Not configured", { status: 503 });
+  if (!secret || !expectedPhoneId) { audit("missing_configuration"); return new Response("Not configured", { status: 503 }); }
   const rawBody = await request.text();
-  if (Buffer.byteLength(rawBody, "utf8") > 1024 * 1024) return new Response("Payload too large", { status: 413 });
-  if (!verifyWhatsAppSignature(rawBody, request.headers.get("x-hub-signature-256"), secret)) return new Response("Unauthorized", { status: 401 });
+  if (Buffer.byteLength(rawBody, "utf8") > 1024 * 1024) { audit("oversized"); return new Response("Payload too large", { status: 413 }); }
+  if (!verifyWhatsAppSignature(rawBody, request.headers.get("x-hub-signature-256"), secret)) { audit("signature_rejected"); return new Response("Unauthorized", { status: 401 }); }
+  audit("signature_verified");
 
   let payload: { object?: unknown; entry?: Entry[] };
-  try { payload = JSON.parse(rawBody); } catch { return new Response("Bad request", { status: 400 }); }
-  if (payload?.object !== "whatsapp_business_account" || !Array.isArray(payload.entry)) return new Response("Bad request", { status: 400 });
+  try { payload = JSON.parse(rawBody); } catch { audit("invalid_json"); return new Response("Bad request", { status: 400 }); }
+  if (payload?.object !== "whatsapp_business_account" || !Array.isArray(payload.entry)) { audit("invalid_payload"); return new Response("Bad request", { status: 400 }); }
 
   const records: Array<{ provider_message_id: string; provider_phone_number_id: string; sender_wa_id: string; event_type: string; payload: unknown }> = [];
   for (const entry of payload.entry) {
@@ -64,11 +71,13 @@ export async function POST(request: Request) {
         records as never,
         { onConflict: "provider_message_id", ignoreDuplicates: true }
       );
-      if (error) return new Response("Storage unavailable", { status: 503 });
+      if (error) { audit("storage_error"); return new Response("Storage unavailable", { status: 503 }); }
     } catch {
+      audit("storage_exception");
       return new Response("Storage unavailable", { status: 503 });
     }
   }
+  audit(records.length ? "messages_stored" : "no_matching_messages", records.length);
   // Delivery receipts contain no incoming patient message and need no inbox row.
   return new Response("EVENT_RECEIVED", { status: 200, headers: { "cache-control": "no-store" } });
 }
