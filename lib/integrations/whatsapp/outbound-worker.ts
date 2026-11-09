@@ -11,6 +11,29 @@ type Outbound = {
 export async function processWhatsAppOutboundBatch() {
   if (process.env.WHATSAPP_OUTBOUND_ENABLED !== "true") return { disabled: true };
   const admin = createAdminClient();
+  // Safe one-time-per-failed-item diagnostic: GET checks token/phone permissions without sending a message.
+  const { data: unclassified } = await admin.from("whatsapp_outbound_events" as "messages")
+    .select("id").eq("status" as "sender_type", "failed" as never)
+    .eq("error_code" as "sender_type", "send_unconfirmed" as never).limit(1);
+  if (unclassified?.length) {
+    const token = process.env.META_WHATSAPP_ACCESS_TOKEN;
+    const phoneId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+    if (token && phoneId) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+        try {
+          const check = await fetch(`https://graph.facebook.com/v27.0/${encodeURIComponent(phoneId)}?fields=id`, {
+            headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: controller.signal,
+          });
+          console.info("[whatsapp-outbound]", JSON.stringify({ outcome: "token_phone_preflight", http_status: check.status }));
+        } finally { clearTimeout(timeout); }
+      } catch { console.warn("[whatsapp-outbound]", JSON.stringify({ outcome: "token_phone_preflight_unavailable" })); }
+    }
+    // Mark diagnostic performed without touching send status; never retry an uncertain send.
+    await admin.from("whatsapp_outbound_events" as "messages").update({ error_code: "send_unconfirmed_checked" } as never)
+      .eq("status" as "sender_type", "failed" as never).eq("error_code" as "sender_type", "send_unconfirmed" as never);
+  }
   const { data, error } = await admin.rpc("claim_whatsapp_outbound_batch" as never, { batch_size: 5 } as never);
   if (error) throw new Error("outbound_claim_failed");
   const batch: Outbound[] = Array.isArray(data) ? (data as Outbound[]) : [];
