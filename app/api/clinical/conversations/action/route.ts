@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +50,18 @@ export async function POST(request: NextRequest) {
       target_client_message_id: body.clientMessageId,
     });
     if (error) return NextResponse.json({ error: "reply_rejected" }, { status: error.code === "42501" ? 403 : 409 });
-    return NextResponse.json({ messageId: data, delivery: "not_confirmed" }, {
+    // The clinical message is persisted even if the WhatsApp link is not yet ready.
+    // The privileged enqueue RPC enforces verified patient linkage and consent.
+    const admin = createAdminClient();
+    const { data: outboundId, error: queueError } = await admin.rpc(
+      "enqueue_doctor_whatsapp_reply" as never,
+      { target_message_id: data } as never
+    );
+    if (queueError) {
+      console.warn("doctor_whatsapp_enqueue_failed", { code: queueError.code });
+      return NextResponse.json({ messageId: data, delivery: "not_queued", reason: "whatsapp_link_unavailable" }, { headers: { "Cache-Control": "no-store" } });
+    }
+    return NextResponse.json({ messageId: data, outboundId, delivery: "queued_not_delivered" }, {
       headers: { "Cache-Control": "no-store" },
     });
   }
