@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: "takeover_rejected" }, { status: error.code === "42501" ? 403 : 409 });
     return NextResponse.json({ accepted: data === true }, { headers: { "Cache-Control": "no-store" } });
   }
-  if (body.action === "reply") {
+  if (body.action === "resume_ai") {\n    const { data, error } = await supabase.rpc("resume_ai_conversation", {\n      target_conversation_id: body.conversationId,\n    });\n    if (error) return NextResponse.json({ error: "resume_rejected" }, { status: error.code === "42501" ? 403 : 409 });\n    return NextResponse.json({ accepted: data === true }, { headers: { "Cache-Control": "no-store" } });\n  }\n  if (body.action === "reply") {
     if (typeof body.content !== "string" || body.content.trim().length < 1 || body.content.length > 2000
       || typeof body.clientMessageId !== "string" || !uuid.test(body.clientMessageId)) {
       return NextResponse.json({ error: "invalid_reply" }, { status: 400 });
