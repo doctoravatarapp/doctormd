@@ -13,9 +13,10 @@ export async function processWhatsAppOutboundBatch() {
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("claim_whatsapp_outbound_batch" as never, { batch_size: 5 } as never);
   if (error) throw new Error("outbound_claim_failed");
+  const batch: Outbound[] = Array.isArray(data) ? (data as Outbound[]) : [];
   let sent = 0;
   let failed = 0;
-  for (const item of (data ?? []) as Outbound[]) {
+  for (const item of batch) {
     try {
       if (item.provider_phone_number_id !== process.env.META_WHATSAPP_PHONE_NUMBER_ID) {
         throw new Error("phone_id_mismatch");
@@ -59,5 +60,5 @@ export async function processWhatsAppOutboundBatch() {
       failed++;
     }
   }
-  return { claimed: (data ?? []).length, sent, failed };
+  return { claimed: batch.length, sent, failed };
 }
