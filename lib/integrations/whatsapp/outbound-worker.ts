@@ -45,12 +45,14 @@ export async function processWhatsAppOutboundBatch() {
         throw new Error("phone_id_mismatch");
       }
       const { data: links, error: linkError } = await admin.from("whatsapp_patient_links" as "messages")
-        .select("id")
+        .select("id,verified_at,consent_recorded_at")
         .eq("organization_id", item.organization_id)
         .eq("patient_id" as "id", item.patient_id)
         .eq("provider_phone_number_id" as "id", item.provider_phone_number_id)
         .eq("sender_wa_id" as "id", item.recipient_wa_id)
         .is("revoked_at" as "created_at", null)
+        .not("verified_at" as "created_at", "is", null)
+        .not("consent_recorded_at" as "created_at", "is", null)
         .limit(1);
       if (linkError || !links?.length) throw new Error("link_revoked");
       // Plain text replies are allowed only inside the 24-hour customer service window.
