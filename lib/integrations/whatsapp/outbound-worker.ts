@@ -52,10 +52,14 @@ export async function processWhatsAppOutboundBatch() {
         .update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: result.messageId } as never)
         .eq("id", item.id);
       sent++;
-    } catch {
+    } catch (err) {
+      // Only fixed error codes or HTTP status; never log provider response, phone or message.
+      const rawCode = err instanceof Error ? err.message : "";
+      const safeCode = /^(phone_id_mismatch|link_revoked|outside_customer_service_window|message_not_approved|whatsapp_outbound_disabled|whatsapp_outbound_not_configured|invalid_whatsapp_message|whatsapp_provider_missing_message_id|whatsapp_provider_http_[0-9]{3})$/.test(rawCode) ? rawCode : "send_unconfirmed";
+      console.warn("[whatsapp-outbound]", JSON.stringify({ outcome: "send_failed", code: safeCode }));
       // No automatic retry: network failures may have delivered the message.
       await admin.from("whatsapp_outbound_events" as "messages")
-        .update({ status: "failed", error_code: "send_unconfirmed" } as never)
+        .update({ status: "failed", error_code: safeCode } as never)
         .eq("id", item.id);
       failed++;
     }
