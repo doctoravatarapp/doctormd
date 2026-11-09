@@ -62,13 +62,28 @@ export async function processWhatsAppOutboundBatch() {
         .limit(1);
       if (inboundError || !inbound?.length) throw new Error("outside_customer_service_window");
       const { data: message, error: messageError } = await admin.from("messages")
-        .select("content,sender_type")
+        .select("content,sender_type,sender_user_id")
         .eq("id", item.message_id)
         .eq("conversation_id", item.conversation_id)
         .eq("organization_id", item.organization_id)
         .single();
       if (messageError || !message || !["doctor", "system"].includes(message.sender_type)) {
         throw new Error("message_not_approved");
+      }
+      // Revalidate handoff immediately before provider send: queued messages must
+      // not leak into a conversation that has returned to autonomous AI mode.
+      if (message.sender_type === "doctor") {
+        const { data: conversation, error: conversationError } = await admin.from("conversations")
+          .select("mode,status,taken_over_by")
+          .eq("id", item.conversation_id)
+          .eq("organization_id", item.organization_id)
+          .eq("patient_id", item.patient_id)
+          .single();
+        if (conversationError || !conversation || conversation.mode !== "doctor"
+          || conversation.status !== "open"
+          || conversation.taken_over_by !== message.sender_user_id) {
+          throw new Error("doctor_handoff_inactive");
+        }
       }
       const result = await sendWhatsAppTestText({ recipientWaId: item.recipient_wa_id, text: message.content });
       await admin.from("whatsapp_outbound_events" as "messages")
@@ -78,7 +93,7 @@ export async function processWhatsAppOutboundBatch() {
     } catch (err) {
       // Only fixed error codes or HTTP status; never log provider response, phone or message.
       const rawCode = err instanceof Error ? err.message : "";
-      const safeCode = /^(phone_id_mismatch|link_revoked|outside_customer_service_window|message_not_approved|whatsapp_outbound_disabled|whatsapp_outbound_not_configured|invalid_whatsapp_message|whatsapp_provider_missing_message_id|whatsapp_provider_http_[0-9]{3}(?:_meta_[0-9]+_[0-9]+)?)$/.test(rawCode) ? rawCode : "send_unconfirmed";
+      const safeCode = /^(phone_id_mismatch|doctor_handoff_inactive|link_revoked|outside_customer_service_window|message_not_approved|whatsapp_outbound_disabled|whatsapp_outbound_not_configured|invalid_whatsapp_message|whatsapp_provider_missing_message_id|whatsapp_provider_http_[0-9]{3}(?:_meta_[0-9]+_[0-9]+)?)$/.test(rawCode) ? rawCode : "send_unconfirmed";
       console.warn("[whatsapp-outbound]", JSON.stringify({ outcome: "send_failed", code: safeCode }));
       // No automatic retry: network failures may have delivered the message.
       await admin.from("whatsapp_outbound_events" as "messages")
