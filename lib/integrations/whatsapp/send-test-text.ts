@@ -35,8 +35,16 @@ export async function sendWhatsAppTestText(args: {
       cache: "no-store",
     });
     if (!response.ok) {
-      // Never include response body: Meta may echo phone numbers and message details.
-      throw new Error(`whatsapp_provider_http_${response.status}`);
+      // Extract numeric Meta error identifiers only; never log or store raw provider text.
+      let code = 0;
+      let subcode = 0;
+      try {
+        const failure: unknown = await response.json();
+        const error = (failure as { error?: { code?: unknown; error_subcode?: unknown } })?.error;
+        if (Number.isSafeInteger(error?.code) && Number(error?.code) >= 0) code = Number(error?.code);
+        if (Number.isSafeInteger(error?.error_subcode) && Number(error?.error_subcode) >= 0) subcode = Number(error?.error_subcode);
+      } catch { /* preserve HTTP status */ }
+      throw new Error(`whatsapp_provider_http_${response.status}_meta_${code}_${subcode}`);
     }
     const payload: unknown = await response.json();
     const id = (payload as { messages?: Array<{ id?: unknown }> })?.messages?.[0]?.id;
