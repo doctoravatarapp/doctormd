@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processWhatsAppOutboundBatch } from "@/lib/integrations/whatsapp/outbound-worker";
 export const runtime="nodejs";export const maxDuration=60;
 function authorized(request:Request){const expected=process.env.CRON_SECRET,provided=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"")??"";if(!expected||provided.length!==expected.length)return false;return timingSafeEqual(Buffer.from(provided),Buffer.from(expected));}
 export async function GET(request:Request){if(!authorized(request))return Response.json({error:"unauthorized"},{status:401});const s=createAdminClient(),{data:actions,error}=await s.rpc("claim_due_automation_actions",{batch_size:20});if(error){console.error("automation_claim_failed",{code:error.code});return Response.json({error:"claim_failed"},{status:500})}let completed=0,deferred=0,failed=0;for(const action of actions??[]){try{const{data,error:completeError}=await s.rpc("complete_automation_action",{target_action_id:action.id});if(completeError)throw completeError;if(data)completed++;else deferred++;}catch(error){failed++;await s.rpc("fail_automation_action",{target_action_id:action.id,error_code:error instanceof Error?error.name:"execution_error"});console.error("automation_action_failed",{actionId:action.id});}}let whatsapp: unknown = null;
@@ -10,4 +11,9 @@ if (process.env.WHATSAPP_ENABLED === "true") {
     else { whatsapp = result.data; console.info("[whatsapp-worker]", JSON.stringify({ outcome: "batch_completed" })); }
   } catch { console.error("[whatsapp-worker]", JSON.stringify({ outcome: "exception" })); }
 }
-return Response.json({claimed:actions?.length??0,completed,deferred,failed,whatsapp});}
+let whatsappOutbound: unknown = null;
+if (process.env.WHATSAPP_OUTBOUND_ENABLED === "true") {
+  try { whatsappOutbound = await processWhatsAppOutboundBatch(); console.info("[whatsapp-outbound]", JSON.stringify({ outcome: "batch_completed", result: whatsappOutbound })); }
+  catch { console.error("[whatsapp-outbound]", JSON.stringify({ outcome: "batch_error" })); }
+}
+return Response.json({claimed:actions?.length??0,completed,deferred,failed,whatsapp,whatsappOutbound});}
