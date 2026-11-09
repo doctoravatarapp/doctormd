@@ -45,6 +45,7 @@ export async function POST(request: Request) {
   try { payload = JSON.parse(rawBody); } catch { audit("invalid_json"); return new Response("Bad request", { status: 400 }); }
   if (payload?.object !== "whatsapp_business_account" || !Array.isArray(payload.entry)) { audit("invalid_payload"); return new Response("Bad request", { status: 400 }); }
 
+  const receipts: Array<{ id: string; status: "sent" | "delivered" | "read" | "failed"; code: string | null }> = [];
   const records: Array<{ provider_message_id: string; provider_phone_number_id: string; sender_wa_id: string; event_type: string; payload: unknown }> = [];
   for (const entry of payload.entry) {
     if (!Array.isArray(entry?.changes)) continue;
@@ -52,6 +53,16 @@ export async function POST(request: Request) {
       if (change?.field !== "messages" || !change.value) continue;
       const phoneId = change.value.metadata?.phone_number_id;
       if (phoneId !== expectedPhoneId) continue;
+      const statuses = (change.value as { statuses?: unknown }).statuses;
+      if (Array.isArray(statuses)) for (const item of statuses) {
+        if (!item || typeof item !== "object") continue;
+        const receipt = item as { id?: unknown; status?: unknown; errors?: Array<{ code?: unknown }> };
+        if (typeof receipt.id !== "string" || receipt.id.length > 512) continue;
+        if (!["sent", "delivered", "read", "failed"].includes(String(receipt.status))) continue;
+        const rawCode = receipt.errors?.[0]?.code;
+        const code = typeof rawCode === "number" && Number.isSafeInteger(rawCode) ? String(rawCode) : null;
+        receipts.push({ id: receipt.id, status: receipt.status as "sent" | "delivered" | "read" | "failed", code });
+      }
       if (!Array.isArray(change.value.messages)) continue;
       for (const item of change.value.messages) {
         if (!item || typeof item !== "object") continue;
@@ -76,6 +87,19 @@ export async function POST(request: Request) {
       audit("storage_exception");
       return new Response("Storage unavailable", { status: 503 });
     }
+  }
+  if (receipts.length) {
+    try {
+      const admin = createAdminClient();
+      for (const receipt of receipts) {
+        const { error } = await admin.from("whatsapp_outbound_events" as "messages")
+          .update({ delivery_status: receipt.status, delivery_error_code: receipt.code, delivery_updated_at: new Date().toISOString() } as never)
+          .eq("provider_message_id" as "id", receipt.id)
+          .eq("provider_phone_number_id" as "id", expectedPhoneId);
+        if (error) { audit("receipt_storage_error"); return new Response("Storage unavailable", { status: 503 }); }
+      }
+    } catch { audit("receipt_storage_exception"); return new Response("Storage unavailable", { status: 503 }); }
+    audit("delivery_receipts_stored", receipts.length);
   }
   audit(records.length ? "messages_stored" : "no_matching_messages", records.length);
   // Delivery receipts contain no incoming patient message and need no inbox row.
